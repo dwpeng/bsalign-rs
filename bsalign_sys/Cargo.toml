@@ -7,7 +7,7 @@ authors = ["dwpeng"]
 license = "MIT"
 repository = "https://github.com/dwpeng/bsalign-rs"
 readme = "../README.md"
-keywords = ["alignment", "bioinformatics", "sequence", "ffi", "bindings", "bsalign"]
+keywords = ["alignment", "bioinformatics", "sequence", "bsalign"]
 categories = ["science", "api-bindings", "external-ffi-bindings"]
 homepage = "https://github.com/dwpeng/bsalign-rs"
 
