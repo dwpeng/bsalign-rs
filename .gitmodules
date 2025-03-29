@@ -1,0 +1,3 @@
+[submodule "bsalign_sys/bsalign"]
+	path = bsalign_sys/bsalign
+	url = git@github.com:dwpeng/bsalign.git
