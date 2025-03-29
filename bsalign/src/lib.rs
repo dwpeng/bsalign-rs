@@ -1,4 +1,4 @@
-pub mod bitseq;
+mod bitseq;
 
 mod align_mode;
 mod align_score;
