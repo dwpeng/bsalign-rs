@@ -245,8 +245,8 @@ impl PsaAlignResult {
         unsafe {
             let mut straln = [
                 alignment.tseq.as_mut().unwrap().buffer,
-                alignment.alignment.as_mut().unwrap().buffer,
                 alignment.qseq.as_mut().unwrap().buffer,
+                alignment.alignment.as_mut().unwrap().buffer,
             ];
             let mut ret = self.result.clone();
             bindings::bs_seqalign_cigar2alnstr(
@@ -273,8 +273,8 @@ impl PsaAlignResult {
             bindings::bs_u1v_clear_and_encap(alignment.qseq, len);
             let mut straln = [
                 alignment.tseq.as_mut().unwrap().buffer,
-                alignment.alignment.as_mut().unwrap().buffer,
                 alignment.qseq.as_mut().unwrap().buffer,
+                alignment.alignment.as_mut().unwrap().buffer,
             ];
             let mut ret = self.result.clone();
             bindings::bs_seqalign_cigar2alnstr(

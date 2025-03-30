@@ -10,8 +10,8 @@ fn main() {
     println!(
         "{}\n{}\n{}",
         alnstr.tseq().to_string(),
+        alnstr.alignment().to_string(),
         alnstr.qseq().to_string(),
-        alnstr.alignment().to_string()
     );
     println!("Alignment result: {}", result);
 }
