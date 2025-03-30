@@ -148,10 +148,10 @@ impl Drop for BsPairwirseAligner {
 
 #[derive(Debug)]
 pub struct PsaAlignResult {
-    pub result: bindings::seqalign_result_t,
-    pub qseq: *mut bindings::u1v,
-    pub tseq: *mut bindings::u1v,
-    pub cigars: *mut bindings::u4v,
+    result: bindings::seqalign_result_t,
+    qseq: *mut bindings::u1v,
+    tseq: *mut bindings::u1v,
+    cigars: *mut bindings::u4v,
 }
 
 impl Deref for PsaAlignResult {
