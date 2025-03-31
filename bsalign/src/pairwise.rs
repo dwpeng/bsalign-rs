@@ -64,44 +64,56 @@ impl BsPairwiseParam {
 }
 
 #[derive(Debug)]
-pub struct Cigars(*mut bindings::u4v);
-
-impl Deref for Cigars {
-    type Target = *mut bindings::u4v;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Cigars {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
+pub struct Cigars {
+    inner: *mut bindings::u4v,
 }
 
 impl Drop for Cigars {
     fn drop(&mut self) {
         unsafe {
-            if self.0.is_null() {
+            if self.inner.is_null() {
                 return;
             }
-            bindings::cigars_free(self.0);
+            bindings::cigars_free(self.inner);
         }
     }
 }
 
 impl Cigars {
+    pub fn new() -> Self {
+        let cigars = unsafe { bindings::cigars_init(32) };
+        Cigars { inner: cigars }
+    }
+}
+
+impl Cigars {
     pub fn get(&self, index: usize) -> Option<(CigarType, usize)> {
-        if index >= unsafe { (*self.0).size } as usize {
+        if index >= unsafe { (*self.inner).size } as usize {
             return None;
         }
         unsafe {
-            let cigar = *(*self.0).buffer.add(index);
+            let cigar = *(*self.as_ptr()).buffer.add(index);
             let cigar_type = CigarType::from((cigar & 0x0f) as u8);
             let length = (cigar >> 4) as usize;
             Some((cigar_type, length))
         }
+    }
+
+    pub fn as_ptr(&self) -> *const bindings::u4v {
+        self.inner
+    }
+
+    pub fn clear(&mut self) {
+        unsafe {
+            bindings::cigars_clear(self.inner);
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        if self.inner.is_null() {
+            return 0;
+        }
+        unsafe { (*self.inner).size as usize }
     }
 }
 
@@ -135,34 +147,6 @@ impl From<u8> for CigarType {
     }
 }
 
-impl Cigars {
-    pub fn new() -> Self {
-        let cigars = unsafe { bindings::cigars_init(32) };
-        Cigars(cigars)
-    }
-
-    pub fn empty() -> Self {
-        Cigars(std::ptr::null_mut())
-    }
-
-    pub fn clear(&mut self) {
-        unsafe {
-            bindings::cigars_clear(self.0);
-        }
-    }
-
-    pub fn as_mut_ptr(&mut self) -> *mut bindings::u4v {
-        self.0
-    }
-
-    pub fn len(&self) -> usize {
-        if self.0.is_null() {
-            return 0;
-        }
-        unsafe { (*self.0).size as usize }
-    }
-}
-
 #[derive(Debug)]
 pub struct BsPairwirseAligner {
     pub param: BsPairwiseParam,
@@ -178,7 +162,9 @@ impl BsPairwirseAligner {
         let cigars = if param.cigar {
             Cigars::new()
         } else {
-            Cigars::empty()
+            Cigars {
+                inner: std::ptr::null_mut(),
+            }
         };
         let mut p = Self {
             param,
@@ -319,7 +305,7 @@ impl<'a> PsaAlignResult<'a> {
                 self.qseq.as_ref().unwrap().buffer,
                 self.tseq.as_ref().unwrap().buffer,
                 &mut ret,
-                self.cigars.0,
+                self.cigars.inner,
                 straln.as_mut_ptr() as *mut *mut i8,
                 len as i32,
             );
@@ -347,7 +333,7 @@ impl<'a> PsaAlignResult<'a> {
                 self.qseq.as_ref().unwrap().buffer,
                 self.tseq.as_ref().unwrap().buffer,
                 &mut ret,
-                self.cigars.0,
+                self.cigars.inner,
                 straln.as_mut_ptr() as *mut *mut i8,
                 len as i32,
             );
@@ -385,7 +371,7 @@ impl BsPairwirseAligner {
                 self.tseq.as_mut().unwrap().buffer,
                 len2 as u32,
                 self.mempool,
-                self.cigars.as_mut_ptr(),
+                self.cigars.inner,
                 self.param.mode as i32,
                 self.param.bandwidth.unwrap_or(0) as u32,
                 self.score_matrix.as_ptr(),
@@ -459,7 +445,7 @@ impl BsPairwirseAligner {
                 self.param.mode as i32,
                 self.param.bandwidth.unwrap_or(0) as u32,
                 self.mempool,
-                self.cigars.as_mut_ptr(),
+                self.cigars.inner,
                 0,
             )
         };
@@ -491,7 +477,7 @@ impl BsPairwirseAligner {
                 self.tseq.as_mut().unwrap().buffer,
                 len2 as u32,
                 self.mempool,
-                self.cigars.as_mut_ptr(),
+                self.cigars.inner,
                 0,
             )
         };
@@ -563,6 +549,7 @@ mod tests {
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
         assert_eq!(result.aln, qseq.len() as i32);
         let cigars = result.cigars;
+        assert!(cigars.as_ptr() != std::ptr::null_mut());
         let cigar = cigars.get(0);
         assert!(cigar.is_some());
         let (cigar_type, length) = cigar.unwrap();
@@ -579,7 +566,7 @@ mod tests {
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
         assert_eq!(result.aln, qseq.len() as i32);
         let cigars = result.cigars;
-        assert_eq!(cigars.0, std::ptr::null_mut());
+        assert_eq!(cigars.as_ptr(), std::ptr::null_mut());
         assert_eq!(cigars.len(), 0);
     }
 }
