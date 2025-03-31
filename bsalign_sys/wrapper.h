@@ -20,10 +20,10 @@ seqalign_result_t bs_ks_seqedit_pairwise(uint8_t ksize, uint8_t *qseq,
                                          uint32_t qlen, uint8_t *tseq,
                                          uint32_t tlen, b1v *mempool,
                                          u4v *cigars, int verbose);
-seqalign_result_t bs_s_epi2_seqedit_pairwise(uint8_t *qseq, uint32_t qlen,
-                                             uint8_t *tseq, uint32_t tlen,
-                                             b1v *mempool, u4v *cigars,
-                                             int mode, int verbose);
+// seqalign_result_t bs_s_epi2_seqedit_pairwise(uint8_t *qseq, uint32_t qlen,
+//                                              uint8_t *tseq, uint32_t tlen,
+//                                              b1v *mempool, u4v *cigars,
+//                                              int mode, int verbose);
 
 void bs_seqalign_cigar2alnstr(u1i *qseq, u1i *tseq, seqalign_result_t *rs,
                               u4v *cigars, char *alnstr[3], int alnlen);
