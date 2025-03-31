@@ -8,7 +8,7 @@ A rust binding for the [bsalign](https://github.com/ruanjue/bsalign) library.
 cargo install bsalign
 ```
 
-## Pairwise alignment
+## Pairwise sequence alignment
 
 ```rust
 use bsalign::pairwise::{BsPairwirseAligner, BsPairwiseParam};
