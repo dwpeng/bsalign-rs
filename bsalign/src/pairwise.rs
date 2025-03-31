@@ -13,6 +13,7 @@ pub struct BsPairwiseParam {
     pub bandwidth: Option<usize>,
     pub ksize: usize,
     pub mode: AlignMode,
+    pub cigar: bool,
 }
 
 impl Default for BsPairwiseParam {
@@ -22,6 +23,7 @@ impl Default for BsPairwiseParam {
             bandwidth: None,
             ksize: 13,
             mode: AlignMode::default(),
+            cigar: true,
         }
     }
 }
@@ -53,6 +55,12 @@ impl BsPairwiseParam {
         p.mode = mode;
         p
     }
+
+    pub fn set_cigar(self, cigar: bool) -> Self {
+        let mut p = self;
+        p.cigar = cigar;
+        p
+    }
 }
 
 #[derive(Debug)]
@@ -75,7 +83,54 @@ impl DerefMut for Cigars {
 impl Drop for Cigars {
     fn drop(&mut self) {
         unsafe {
+            if self.0.is_null() {
+                return;
+            }
             bindings::cigars_free(self.0);
+        }
+    }
+}
+
+impl Cigars {
+    pub fn get(&self, index: usize) -> Option<(CigarType, usize)> {
+        if index >= unsafe { (*self.0).size } as usize {
+            return None;
+        }
+        unsafe {
+            let cigar = *(*self.0).buffer.add(index);
+            let cigar_type = CigarType::from((cigar & 0x0f) as u8);
+            let length = (cigar >> 4) as usize;
+            Some((cigar_type, length))
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CigarType {
+    Match = 0,
+    Insertion = 1,
+    Deletion = 2,
+    Skip = 3,
+    SoftClip = 4,
+    HardClip = 5,
+    Padding = 6,
+    Equal = 7,
+    Mismatch = 8,
+}
+
+impl From<u8> for CigarType {
+    fn from(value: u8) -> Self {
+        match value {
+            0 => CigarType::Match,
+            1 => CigarType::Insertion,
+            2 => CigarType::Deletion,
+            3 => CigarType::Skip,
+            4 => CigarType::SoftClip,
+            5 => CigarType::HardClip,
+            6 => CigarType::Padding,
+            7 => CigarType::Equal,
+            8 => CigarType::Mismatch,
+            _ => panic!("Invalid cigar type"),
         }
     }
 }
@@ -99,24 +154,36 @@ impl Cigars {
     pub fn as_mut_ptr(&mut self) -> *mut bindings::u4v {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        if self.0.is_null() {
+            return 0;
+        }
+        unsafe { (*self.0).size as usize }
+    }
 }
 
 #[derive(Debug)]
 pub struct BsPairwirseAligner {
     pub param: BsPairwiseParam,
     mempool: *mut bindings::b1v,
-    pub cigars: Cigars,
+    cigars: Cigars,
     score_matrix: [i8; 16],
-    pub qseq: *mut bindings::u1v,
-    pub tseq: *mut bindings::u1v,
+    qseq: *mut bindings::u1v,
+    tseq: *mut bindings::u1v,
 }
 
 impl BsPairwirseAligner {
     pub fn new(param: BsPairwiseParam) -> Self {
+        let cigars = if param.cigar {
+            Cigars::new()
+        } else {
+            Cigars::empty()
+        };
         let mut p = Self {
             param,
             mempool: std::ptr::null_mut(),
-            cigars: Cigars::empty(),
+            cigars: cigars,
             score_matrix: [0; 16],
             qseq: std::ptr::null_mut(),
             tseq: std::ptr::null_mut(),
@@ -128,7 +195,6 @@ impl BsPairwirseAligner {
                 param.align_score.X as i8,
             );
             p.mempool = bindings::mempool_init(1024 * 1024, 0, 0);
-            p.cigars = Cigars::new();
             p.qseq = bindings::bs_u1v_init(1024);
             p.tseq = bindings::bs_u1v_init(1024);
         }
@@ -151,7 +217,7 @@ pub struct PsaAlignResult<'a> {
     result: bindings::seqalign_result_t,
     qseq: *mut bindings::u1v,
     tseq: *mut bindings::u1v,
-    cigars: &'a Cigars,
+    pub cigars: &'a Cigars,
 }
 
 impl<'a> Deref for PsaAlignResult<'a> {
@@ -487,5 +553,33 @@ mod tests {
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
         assert_eq!(result.aln, qseq.len() as i32);
         drop(aligner);
+    }
+
+    #[test]
+    fn test_cigars() {
+        let qseq = include_str!("../../test-data/seq.seq");
+        let param = BsPairwiseParam::default();
+        let mut aligner = BsPairwirseAligner::new(param);
+        let result = aligner.align_banded_striped_8bit(qseq, qseq);
+        assert_eq!(result.aln, qseq.len() as i32);
+        let cigars = result.cigars;
+        let cigar = cigars.get(0);
+        assert!(cigar.is_some());
+        let (cigar_type, length) = cigar.unwrap();
+        assert_eq!(cigar_type, CigarType::Match);
+        assert_eq!(length, qseq.len());
+        assert_eq!(cigars.len(), 1);
+    }
+
+    #[test]
+    fn test_cigars_empty() {
+        let qseq = include_str!("../../test-data/seq.seq");
+        let param = BsPairwiseParam::default().set_cigar(false);
+        let mut aligner = BsPairwirseAligner::new(param);
+        let result = aligner.align_banded_striped_8bit(qseq, qseq);
+        assert_eq!(result.aln, qseq.len() as i32);
+        let cigars = result.cigars;
+        assert_eq!(cigars.0, std::ptr::null_mut());
+        assert_eq!(cigars.len(), 0);
     }
 }
