@@ -339,7 +339,7 @@ impl BsPairwirseAligner {
         }
     }
 
-    pub fn align_striped_edit_2bit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
+    pub unsafe fn align_striped_edit_2bit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -455,7 +455,7 @@ mod tests {
         let qseq = include_str!("../../test-data/seq.seq");
         let param = BsPairwiseParam::default().set_ksize(4);
         let mut aligner = BsPairwirseAligner::new(param);
-        let result = aligner.align_striped_edit_2bit(qseq, qseq);
+        let result = unsafe { aligner.align_striped_edit_2bit(qseq, qseq) };
         assert_eq!(result.aln, qseq.len() as i32);
     }
 
