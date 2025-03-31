@@ -15232,18 +15232,6 @@ unsafe extern "C" {
     ) -> seqalign_result_t;
 }
 unsafe extern "C" {
-    pub fn bs_s_epi2_seqedit_pairwise(
-        qseq: *mut u8,
-        qlen: u32,
-        tseq: *mut u8,
-        tlen: u32,
-        mempool: *mut b1v,
-        cigars: *mut u4v,
-        mode: ::std::os::raw::c_int,
-        verbose: ::std::os::raw::c_int,
-    ) -> seqalign_result_t;
-}
-unsafe extern "C" {
     pub fn bs_seqalign_cigar2alnstr(
         qseq: *mut u1i,
         tseq: *mut u1i,
