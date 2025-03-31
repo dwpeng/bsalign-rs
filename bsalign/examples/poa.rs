@@ -12,7 +12,7 @@ fn main() {
     poa.add_sequence(seq);
     poa.align();
 
-    let consensus = poa.get_consensus();
+    let consensus = poa.get_cns();
     let bitseq: BitSeq = consensus.into();
     let consensus = bitseq.to_string();
     println!("Consensus: {}", consensus);

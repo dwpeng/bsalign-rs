@@ -15345,7 +15345,13 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
-    pub fn bspoa_consensus(poa: *mut BSPOA, retlen: *mut u4i) -> *mut u1i;
+    pub fn bspoa_get_cns(poa: *mut BSPOA, retlen: *mut u4i) -> *mut u1i;
+}
+unsafe extern "C" {
+    pub fn bspoa_get_qlt(poa: *mut BSPOA, retlen: *mut u4i) -> *mut u1i;
+}
+unsafe extern "C" {
+    pub fn bspoa_get_alt(poa: *mut BSPOA, retlen: *mut u4i) -> *mut u1i;
 }
 unsafe extern "C" {
     pub fn string_free(s: *mut String);

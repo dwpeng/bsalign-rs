@@ -34,10 +34,22 @@ int bspoa_load_binary_msa(BSPOA *poa, const char *filename, String *metadata) {
   fclose(in);
   return ret;
 }
-u1i *bspoa_consensus(BSPOA *poa, u4i *retlen) {
+
+u1i *bspoa_get_cns(BSPOA *poa, u4i *retlen) {
   *retlen = poa->cns->size;
   return poa->cns->buffer;
 }
+
+u1i *bspoa_get_qlt(BSPOA *poa, u4i *retlen) {
+  *retlen = poa->qlt->size;
+  return poa->qlt->buffer;
+}
+
+u1i *bspoa_get_alt(BSPOA *poa, u4i *retlen) {
+  *retlen = poa->alt->size;
+  return poa->alt->buffer;
+}
+
 void string_free(String *s) { free_string(s); }
 String *string_init(size_t size) { return init_string(size); }
 

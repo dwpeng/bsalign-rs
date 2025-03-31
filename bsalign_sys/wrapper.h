@@ -59,7 +59,9 @@ void bspoa_end(BSPOA *poa);
 void bspoa_dump_binary_msa(BSPOA *poa, char *metadata, u4i metalen,
                            const char *filename);
 int bspoa_load_binary_msa(BSPOA *poa, const char *filename, String *metadata);
-u1i *bspoa_consensus(BSPOA *poa, u4i *retlen);
+u1i *bspoa_get_cns(BSPOA *poa, u4i *retlen);
+u1i *bspoa_get_qlt(BSPOA *poa, u4i *retlen);
+u1i *bspoa_get_alt(BSPOA *poa, u4i *retlen);
 
 void string_free(String *s);
 String *string_init(size_t size);

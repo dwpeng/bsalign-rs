@@ -155,14 +155,36 @@ impl BsPoaAligner {
         }
     }
 
-    pub fn get_consensus(&self) -> &[u8] {
+    pub fn get_cns(&self) -> &[u8] {
         if !self.aligned {
             panic!("Align sequences before calling get_consensus, call `align` first");
         }
         unsafe {
             let mut len = 0;
-            let cns = bindings::bspoa_consensus(self.poa, &mut len);
+            let cns = bindings::bspoa_get_cns(self.poa, &mut len);
             std::slice::from_raw_parts(cns, len as usize)
+        }
+    }
+
+    pub fn get_qlt(&self) -> &[u8] {
+        if !self.aligned {
+            panic!("Align sequences before calling get_qlt, call `align` first");
+        }
+        unsafe {
+            let mut len = 0;
+            let qlt = bindings::bspoa_get_qlt(self.poa, &mut len);
+            std::slice::from_raw_parts(qlt, len as usize)
+        }
+    }
+
+    pub fn get_alt(&self) -> &[u8] {
+        if !self.aligned {
+            panic!("Align sequences before calling get_alt, call `align` first");
+        }
+        unsafe {
+            let mut len = 0;
+            let alt = bindings::bspoa_get_alt(self.poa, &mut len);
+            std::slice::from_raw_parts(alt, len as usize)
         }
     }
 
@@ -447,7 +469,7 @@ mod tests {
         poa.add_sequence(seq2);
         poa.add_sequence(seq3);
         poa.align();
-        let cns = poa.get_consensus();
+        let cns = poa.get_cns();
         let bitseq: BitSeq = cns.into();
         assert_eq!(bitseq.to_string(), "TCATCTGATTAGCTAGTACCCCCCCC");
         poa.set_metainfo("test".to_string());
