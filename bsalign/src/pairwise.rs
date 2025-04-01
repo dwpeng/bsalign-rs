@@ -67,7 +67,7 @@ pub struct Cigars {
 }
 
 impl Cigars {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Cigars { inner: U4V::new() }
     }
 
@@ -75,7 +75,7 @@ impl Cigars {
         self.inner.len()
     }
 
-    pub fn as_ptr(&self) -> *mut bindings::u4v {
+    fn as_ptr(&self) -> *mut bindings::u4v {
         self.inner.as_ptr()
     }
 }
@@ -93,7 +93,7 @@ impl Cigars {
         }
     }
 
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         self.inner.clear();
     }
 }
