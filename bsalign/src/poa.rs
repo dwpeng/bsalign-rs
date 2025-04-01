@@ -43,7 +43,7 @@ impl BsPoaAligner {
             poa
         };
         BsPoaAligner {
-            params: params,
+            params,
             poa,
             metainfo: None,
             aligned: false,

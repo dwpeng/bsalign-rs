@@ -6,7 +6,7 @@ use bsalign::{
 fn main() {
     let param = BsPoaParam::default();
     let mut poa = BsPoaAligner::new(param);
-    let seq = include_str!("../../test-data/seq.seq");
+    let seq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
     poa.add_sequence(seq);
     poa.add_sequence(seq);
     poa.add_sequence(seq);

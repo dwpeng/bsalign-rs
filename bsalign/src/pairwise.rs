@@ -1,11 +1,9 @@
-use std::{
-    fmt::Display,
-    ops::{Deref, DerefMut},
-};
+use std::fmt::Display;
 
 use crate::AlignMode;
 use crate::AlignScore;
-use bsalign_sys::bindings;
+use crate::vector::{Mempool, U1V, U4V};
+use bsalign_sys::bindings::{self, seqalign_result_t};
 
 #[derive(Debug, Clone, Copy)]
 pub struct BsPairwiseParam {
@@ -65,30 +63,26 @@ impl BsPairwiseParam {
 
 #[derive(Debug)]
 pub struct Cigars {
-    inner: *mut bindings::u4v,
-}
-
-impl Drop for Cigars {
-    fn drop(&mut self) {
-        unsafe {
-            if self.inner.is_null() {
-                return;
-            }
-            bindings::cigars_free(self.inner);
-        }
-    }
+    inner: U4V,
 }
 
 impl Cigars {
     pub fn new() -> Self {
-        let cigars = unsafe { bindings::cigars_init(32) };
-        Cigars { inner: cigars }
+        Cigars { inner: U4V::new() }
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn as_ptr(&self) -> *mut bindings::u4v {
+        self.inner.as_ptr()
     }
 }
 
 impl Cigars {
     pub fn get(&self, index: usize) -> Option<(CigarType, usize)> {
-        if index >= unsafe { (*self.inner).size } as usize {
+        if self.inner.is_null() || index >= self.len() {
             return None;
         }
         unsafe {
@@ -99,21 +93,8 @@ impl Cigars {
         }
     }
 
-    pub fn as_ptr(&self) -> *const bindings::u4v {
-        self.inner
-    }
-
     pub fn clear(&mut self) {
-        unsafe {
-            bindings::cigars_clear(self.inner);
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        if self.inner.is_null() {
-            return 0;
-        }
-        unsafe { (*self.inner).size as usize }
+        self.inner.clear();
     }
 }
 
@@ -150,11 +131,11 @@ impl From<u8> for CigarType {
 #[derive(Debug)]
 pub struct BsPairwirseAligner {
     pub param: BsPairwiseParam,
-    mempool: *mut bindings::b1v,
+    mempool: Mempool,
     cigars: Cigars,
     score_matrix: [i8; 16],
-    qseq: *mut bindings::u1v,
-    tseq: *mut bindings::u1v,
+    qseq: U1V,
+    tseq: U1V,
 }
 
 impl BsPairwirseAligner {
@@ -163,16 +144,16 @@ impl BsPairwirseAligner {
             Cigars::new()
         } else {
             Cigars {
-                inner: std::ptr::null_mut(),
+                inner: U4V::empty(),
             }
         };
         let mut p = Self {
             param,
-            mempool: std::ptr::null_mut(),
-            cigars: cigars,
+            mempool: Mempool::with_capacity(1024 * 1024),
+            cigars,
             score_matrix: [0; 16],
-            qseq: std::ptr::null_mut(),
-            tseq: std::ptr::null_mut(),
+            qseq: U1V::with_capacity(1024),
+            tseq: U1V::with_capacity(1024),
         };
         unsafe {
             bindings::bs_epi8_seqalign_set_score_matrix(
@@ -180,43 +161,50 @@ impl BsPairwirseAligner {
                 param.align_score.M as i8,
                 param.align_score.X as i8,
             );
-            p.mempool = bindings::mempool_init(1024 * 1024, 0, 0);
-            p.qseq = bindings::bs_u1v_init(1024);
-            p.tseq = bindings::bs_u1v_init(1024);
         }
         p
     }
 }
 
-impl Drop for BsPairwirseAligner {
-    fn drop(&mut self) {
-        unsafe {
-            bindings::mempool_free(self.mempool);
-            bindings::bs_u1v_free(self.qseq);
-            bindings::bs_u1v_free(self.tseq);
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct PsaAlignResult<'a> {
-    result: bindings::seqalign_result_t,
-    qseq: *mut bindings::u1v,
-    tseq: *mut bindings::u1v,
+    qseq: &'a U1V,
+    tseq: &'a U1V,
     pub cigars: &'a Cigars,
+    pub qb: usize,
+    pub qe: usize,
+    pub tb: usize,
+    pub te: usize,
+    pub aln: usize,
+    pub mat: usize,
+    pub mis: usize,
+    pub ins: usize,
+    pub del: usize,
+    pub score: i32,
 }
 
-impl<'a> Deref for PsaAlignResult<'a> {
-    type Target = bindings::seqalign_result_t;
-
-    fn deref(&self) -> &Self::Target {
-        &self.result
-    }
-}
-
-impl<'a> DerefMut for PsaAlignResult<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.result
+impl<'a> PsaAlignResult<'a> {
+    fn init_with(
+        qseq: &'a U1V,
+        tseq: &'a U1V,
+        cigars: &'a Cigars,
+        result: seqalign_result_t,
+    ) -> Self {
+        PsaAlignResult {
+            qseq,
+            tseq,
+            cigars,
+            qb: result.qb as usize,
+            qe: result.qe as usize,
+            tb: result.tb as usize,
+            te: result.te as usize,
+            aln: result.aln as usize,
+            mat: result.mat as usize,
+            mis: result.mis as usize,
+            ins: result.ins as usize,
+            del: result.del as usize,
+            score: result.score,
+        }
     }
 }
 
@@ -233,30 +221,18 @@ impl<'a> Display for PsaAlignResult<'a> {
 #[derive(Debug)]
 pub struct AlignmentString {
     pub len: usize,
-    tseq: *mut bindings::u1v,
-    alignment: *mut bindings::u1v,
-    qseq: *mut bindings::u1v,
-}
-
-impl Drop for AlignmentString {
-    fn drop(&mut self) {
-        unsafe {
-            bindings::bs_u1v_free(self.tseq);
-            bindings::bs_u1v_free(self.alignment);
-            bindings::bs_u1v_free(self.qseq);
-        }
-    }
+    tseq: U1V,
+    alignment: U1V,
+    qseq: U1V,
 }
 
 impl AlignmentString {
     pub fn with_capacity(capacity: usize) -> Self {
-        unsafe {
-            AlignmentString {
-                len: capacity,
-                tseq: bindings::bs_u1v_init(capacity + 1),
-                alignment: bindings::bs_u1v_init(capacity + 1),
-                qseq: bindings::bs_u1v_init(capacity + 1),
-            }
+        AlignmentString {
+            len: capacity,
+            tseq: U1V::with_capacity(capacity + 1),
+            alignment: U1V::with_capacity(capacity + 1),
+            qseq: U1V::with_capacity(capacity + 1),
         }
     }
 }
@@ -265,7 +241,7 @@ impl AlignmentString {
     pub fn tseq(&self) -> &str {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                self.tseq.as_mut().unwrap().buffer,
+                self.tseq.buffer(),
                 self.len as usize,
             ))
         }
@@ -274,7 +250,7 @@ impl AlignmentString {
     pub fn qseq(&self) -> &str {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                self.qseq.as_mut().unwrap().buffer,
+                self.qseq.buffer(),
                 self.len as usize,
             ))
         }
@@ -283,7 +259,7 @@ impl AlignmentString {
     pub fn alignment(&self) -> &str {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                self.alignment.as_mut().unwrap().buffer,
+                self.alignment.buffer(),
                 self.len as usize,
             ))
         }
@@ -296,16 +272,16 @@ impl<'a> PsaAlignResult<'a> {
         let alignment = AlignmentString::with_capacity(len);
         unsafe {
             let mut straln = [
-                alignment.tseq.as_mut().unwrap().buffer,
-                alignment.qseq.as_mut().unwrap().buffer,
-                alignment.alignment.as_mut().unwrap().buffer,
+                alignment.tseq.buffer(),
+                alignment.qseq.buffer(),
+                alignment.alignment.buffer(),
             ];
-            let mut ret = self.result.clone();
+            let mut ret = seqalign_result_t::default();
             bindings::bs_seqalign_cigar2alnstr(
-                self.qseq.as_ref().unwrap().buffer,
-                self.tseq.as_ref().unwrap().buffer,
+                self.qseq.buffer(),
+                self.tseq.buffer(),
                 &mut ret,
-                self.cigars.inner,
+                self.cigars.as_ptr(),
                 straln.as_mut_ptr() as *mut *mut i8,
                 len as i32,
             );
@@ -320,20 +296,20 @@ impl<'a> PsaAlignResult<'a> {
             alignment.len = len;
         }
         unsafe {
-            bindings::bs_u1v_clear_and_encap(alignment.tseq, len);
-            bindings::bs_u1v_clear_and_encap(alignment.alignment, len);
-            bindings::bs_u1v_clear_and_encap(alignment.qseq, len);
+            bindings::bs_u1v_clear_and_encap(alignment.tseq.as_ptr(), len);
+            bindings::bs_u1v_clear_and_encap(alignment.alignment.as_ptr(), len);
+            bindings::bs_u1v_clear_and_encap(alignment.qseq.as_ptr(), len);
             let mut straln = [
-                alignment.tseq.as_mut().unwrap().buffer,
-                alignment.qseq.as_mut().unwrap().buffer,
-                alignment.alignment.as_mut().unwrap().buffer,
+                alignment.tseq.buffer(),
+                alignment.qseq.buffer(),
+                alignment.alignment.buffer(),
             ];
-            let mut ret = self.result.clone();
+            let mut ret = seqalign_result_t::default();
             bindings::bs_seqalign_cigar2alnstr(
-                self.qseq.as_ref().unwrap().buffer,
-                self.tseq.as_ref().unwrap().buffer,
+                self.qseq.buffer(),
+                self.tseq.buffer(),
                 &mut ret,
-                self.cigars.inner,
+                self.cigars.as_ptr(),
                 straln.as_mut_ptr() as *mut *mut i8,
                 len as i32,
             );
@@ -344,12 +320,10 @@ impl<'a> PsaAlignResult<'a> {
 
 impl BsPairwirseAligner {
     pub fn reset(&mut self) {
-        unsafe {
-            bindings::mempool_clear(self.mempool);
-            self.cigars.clear();
-            bindings::bs_u1v_clear(self.qseq);
-            bindings::bs_u1v_clear(self.tseq);
-        }
+        self.mempool.clear();
+        self.cigars.clear();
+        self.qseq.clear();
+        self.tseq.clear();
     }
 
     pub fn align_banded_striped_8bit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
@@ -359,19 +333,19 @@ impl BsPairwirseAligner {
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {
-            bindings::create_bits_from_seq(self.qseq, qseq.as_ptr(), qseq.len() as u32);
-            bindings::create_bits_from_seq(self.tseq, tseq.as_ptr(), tseq.len() as u32);
+            bindings::create_bits_from_seq(self.qseq.as_ptr(), qseq.as_ptr(), qseq.len() as u32);
+            bindings::create_bits_from_seq(self.tseq.as_ptr(), tseq.as_ptr(), tseq.len() as u32);
         }
         let len1 = qseq.len();
         let len2 = tseq.len();
         let r = unsafe {
             bindings::bs_bs_epi8_seqalign_pairwise(
-                self.qseq.as_mut().unwrap().buffer,
+                self.qseq.buffer(),
                 len1 as u32,
-                self.tseq.as_mut().unwrap().buffer,
+                self.tseq.buffer(),
                 len2 as u32,
-                self.mempool,
-                self.cigars.inner,
+                self.mempool.as_ptr(),
+                self.cigars.as_ptr(),
                 self.param.mode as i32,
                 self.param.bandwidth.unwrap_or(0) as u32,
                 self.score_matrix.as_ptr(),
@@ -383,12 +357,7 @@ impl BsPairwirseAligner {
             )
         };
 
-        PsaAlignResult {
-            result: r,
-            qseq: self.qseq,
-            tseq: self.tseq,
-            cigars: &self.cigars,
-        }
+        PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
     }
 
     // // unsable for 2bit alignment, so commented out
@@ -431,30 +400,25 @@ impl BsPairwirseAligner {
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {
-            bindings::create_bits_from_seq(self.qseq, qseq.as_ptr(), qseq.len() as u32);
-            bindings::create_bits_from_seq(self.tseq, tseq.as_ptr(), tseq.len() as u32);
+            bindings::create_bits_from_seq(self.qseq.as_ptr(), qseq.as_ptr(), qseq.len() as u32);
+            bindings::create_bits_from_seq(self.tseq.as_ptr(), tseq.as_ptr(), tseq.len() as u32);
         }
         let len1 = qseq.len();
         let len2 = tseq.len();
         let r = unsafe {
             bindings::bs_s_seqedit_pairwise(
-                self.qseq.as_mut().unwrap().buffer,
+                self.qseq.buffer(),
                 len1 as u32,
-                self.tseq.as_mut().unwrap().buffer,
+                self.tseq.buffer(),
                 len2 as u32,
                 self.param.mode as i32,
                 self.param.bandwidth.unwrap_or(0) as u32,
-                self.mempool,
-                self.cigars.inner,
+                self.mempool.as_ptr(),
+                self.cigars.as_ptr(),
                 0,
             )
         };
-        PsaAlignResult {
-            result: r,
-            qseq: self.qseq,
-            tseq: self.tseq,
-            cigars: &self.cigars,
-        }
+        PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
     }
 
     pub fn align_kmer_striped_edit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
@@ -464,29 +428,24 @@ impl BsPairwirseAligner {
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {
-            bindings::create_bits_from_seq(self.qseq, qseq.as_ptr(), qseq.len() as u32);
-            bindings::create_bits_from_seq(self.tseq, tseq.as_ptr(), tseq.len() as u32);
+            bindings::create_bits_from_seq(self.qseq.as_ptr(), qseq.as_ptr(), qseq.len() as u32);
+            bindings::create_bits_from_seq(self.tseq.as_ptr(), tseq.as_ptr(), tseq.len() as u32);
         }
         let len1 = qseq.len();
         let len2 = tseq.len();
         let r = unsafe {
             bindings::bs_ks_seqedit_pairwise(
                 self.param.ksize as u8,
-                self.qseq.as_mut().unwrap().buffer,
+                self.qseq.buffer(),
                 len1 as u32,
-                self.tseq.as_mut().unwrap().buffer,
+                self.tseq.buffer(),
                 len2 as u32,
-                self.mempool,
-                self.cigars.inner,
+                self.mempool.as_ptr(),
+                self.cigars.as_ptr(),
                 0,
             )
         };
-        PsaAlignResult {
-            result: r,
-            qseq: self.qseq,
-            tseq: self.tseq,
-            cigars: &self.cigars,
-        }
+        PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
     }
 }
 
@@ -500,7 +459,7 @@ mod tests {
         let param = BsPairwiseParam::default().set_ksize(4);
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_striped_edit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
     }
 
     // #[test]
@@ -519,7 +478,7 @@ mod tests {
         let param = BsPairwiseParam::default().set_ksize(4);
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_kmer_striped_edit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
     }
 
     #[test]
@@ -528,7 +487,7 @@ mod tests {
         let param = BsPairwiseParam::default();
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
     }
 
     #[test]
@@ -537,7 +496,7 @@ mod tests {
         let param = BsPairwiseParam::default();
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
         drop(aligner);
     }
 
@@ -547,7 +506,7 @@ mod tests {
         let param = BsPairwiseParam::default();
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
         let cigars = result.cigars;
         assert!(cigars.as_ptr() != std::ptr::null_mut());
         let cigar = cigars.get(0);
@@ -564,7 +523,7 @@ mod tests {
         let param = BsPairwiseParam::default().set_cigar(false);
         let mut aligner = BsPairwirseAligner::new(param);
         let result = aligner.align_banded_striped_8bit(qseq, qseq);
-        assert_eq!(result.aln, qseq.len() as i32);
+        assert_eq!(result.aln, qseq.len());
         let cigars = result.cigars;
         assert_eq!(cigars.as_ptr(), std::ptr::null_mut());
         assert_eq!(cigars.len(), 0);
