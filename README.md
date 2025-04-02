@@ -33,10 +33,7 @@ fn main() {
 ## Multiple sequence alignment
 
 ```rust
-use bsalign::{
-    BitSeq,
-    poa::{BsPoaAligner, BsPoaParam},
-};
+use bsalign::poa::{BsPoaAligner, BsPoaParam};
 
 fn main() {
     let param = BsPoaParam::default();
@@ -46,10 +43,14 @@ fn main() {
     poa.add_sequence(seq);
     poa.add_sequence(seq);
     poa.align();
-
     let consensus = poa.get_cns();
-    let bitseq: BitSeq = consensus.into();
-    let consensus = bitseq.to_string();
-    println!("Consensus: {}", consensus);
+    let consensus = consensus.as_string();
+    println!("CNS: {}", consensus);
+    let qlt = poa.get_qlt();
+    let qlt = qlt.as_string();
+    println!("QLT: {}", qlt);
+    let alt = poa.get_alt();
+    let alt = alt.as_string();
+    println!("ALT: {}", alt);
 }
 ```
