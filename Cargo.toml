@@ -3,7 +3,7 @@ resolver = "2"
 members = ["bsalign", "bsalign_sys"]
 
 [workspace.package]
-version = "0.6.1"
+version = "0.6.2"
 edition = "2024"
 description = "Rust bindings for the bsalign C library"
 authors = ["dwpeng"]
@@ -15,4 +15,4 @@ categories = ["science", "api-bindings", "external-ffi-bindings"]
 homepage = "https://github.com/dwpeng/bsalign-rs"
 
 [workspace.dependencies]
-bsalign_sys = { path = "./bsalign_sys", version = "0.6.1" }
+bsalign_sys = { path = "./bsalign_sys", version = "0.6.2" }
