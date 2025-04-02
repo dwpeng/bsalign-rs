@@ -1,5 +1,3 @@
-mod bitseq;
-
 mod align_mode;
 mod align_score;
 pub mod pairwise;
@@ -8,4 +6,3 @@ mod vector;
 
 pub use align_mode::AlignMode;
 pub use align_score::AlignScore;
-pub use bitseq::BitSeq;

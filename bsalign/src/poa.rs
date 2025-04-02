@@ -51,6 +51,107 @@ impl BsPoaAligner {
     }
 }
 
+#[inline]
+fn base_from_2bit(base: u8) -> u8 {
+    match base {
+        0 => b'A',
+        1 => b'C',
+        2 => b'G',
+        3 => b'T',
+        _ => b'N',
+    }
+}
+
+#[derive(Debug)]
+pub struct Consensus<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> Consensus<'a> {
+    pub fn as_string(&self) -> String {
+        let mut s = String::with_capacity(self.len());
+        for i in 0..self.len() {
+            let base = self.get_base(i).unwrap();
+            s.push(base as char);
+        }
+        s
+    }
+
+    pub fn get_bit(&self, index: usize) -> Option<u8> {
+        if index >= self.len() {
+            return None;
+        }
+        let bit = self.inner[index];
+        Some(bit)
+    }
+
+    pub fn get_base(&self, index: usize) -> Option<u8> {
+        if index >= self.len() {
+            return None;
+        }
+        let bit = self.inner[index];
+        Some(base_from_2bit(bit))
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+#[derive(Debug)]
+pub struct Quality<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> Quality<'a> {
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn as_string(&self) -> String {
+        let mut s = String::with_capacity(self.len());
+        for i in 0..self.len() {
+            let base = self.get(i).unwrap();
+            s.push((b'!' + base) as char);
+        }
+        s
+    }
+
+    pub fn get(&self, index: usize) -> Option<u8> {
+        if index >= self.len() {
+            return None;
+        }
+        Some(self.inner[index])
+    }
+}
+
+#[derive(Debug)]
+pub struct Alt<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> Alt<'a> {
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn as_string(&self) -> String {
+        let mut s = String::with_capacity(self.len());
+        for i in 0..self.len() {
+            let base = self.get(i).unwrap();
+            s.push((b'!' + base) as char);
+        }
+        s
+    }
+
+    pub fn get(&self, index: usize) -> Option<u8> {
+        if index >= self.len() {
+            return None;
+        }
+        Some(self.inner[index])
+    }
+}
+
 impl BsPoaAligner {
     pub fn add_sequence<T>(&mut self, seq: &T)
     where
@@ -155,37 +256,40 @@ impl BsPoaAligner {
         }
     }
 
-    pub fn get_cns(&self) -> &[u8] {
+    pub fn get_cns(&self) -> Consensus<'_> {
         if !self.aligned {
             panic!("Align sequences before calling get_consensus, call `align` first");
         }
-        unsafe {
+        let c = unsafe {
             let mut len = 0;
             let cns = bindings::bspoa_get_cns(self.poa, &mut len);
             std::slice::from_raw_parts(cns, len as usize)
-        }
+        };
+        Consensus { inner: c }
     }
 
-    pub fn get_qlt(&self) -> &[u8] {
+    pub fn get_qlt(&self) -> Quality<'_> {
         if !self.aligned {
             panic!("Align sequences before calling get_qlt, call `align` first");
         }
-        unsafe {
+        let q = unsafe {
             let mut len = 0;
             let qlt = bindings::bspoa_get_qlt(self.poa, &mut len);
             std::slice::from_raw_parts(qlt, len as usize)
-        }
+        };
+        Quality { inner: q }
     }
 
-    pub fn get_alt(&self) -> &[u8] {
+    pub fn get_alt(&self) -> Alt<'_> {
         if !self.aligned {
             panic!("Align sequences before calling get_alt, call `align` first");
         }
-        unsafe {
+        let a = unsafe {
             let mut len = 0;
             let alt = bindings::bspoa_get_alt(self.poa, &mut len);
             std::slice::from_raw_parts(alt, len as usize)
-        }
+        };
+        Alt { inner: a }
     }
 
     pub fn print_snvs(&self, filename: &str, label: Option<&str>) {
@@ -455,8 +559,6 @@ impl BsPoaParam {
 
 #[cfg(test)]
 mod tests {
-    use crate::bitseq::BitSeq;
-
     use super::*;
     #[test]
     fn test_poa() {
@@ -470,8 +572,10 @@ mod tests {
         poa.add_sequence(seq3);
         poa.align();
         let cns = poa.get_cns();
-        let bitseq: BitSeq = cns.into();
-        assert_eq!(bitseq.to_string(), "TCATCTGATTAGCTAGTACCCCCCCC");
+        println!("Consensus: {}", cns.as_string());
+        assert_eq!(cns.as_string(), "TCATCTGATTAGCTAGTACCCCCCCC");
+        let qlt = poa.get_qlt();
+        assert_eq!(qlt.len(), cns.len());
         poa.set_metainfo("test".to_string());
         poa.dump_msa("test.msa");
         let poa = BsPoaAligner::load_msa("test.msa");
