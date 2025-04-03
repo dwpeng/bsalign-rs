@@ -39,14 +39,14 @@ checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "bsalign"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bsalign_sys",
 ]
 
 [[package]]
 name = "bsalign_sys"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bindgen",
  "cc",
