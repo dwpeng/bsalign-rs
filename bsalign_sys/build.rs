@@ -9,7 +9,7 @@ fn complie() {
     let mut b = cc::Build::new();
     b.file("./wrapper.c")
         .include("./")
-        .flag("-std=gnu89")
+        .flag("-std=c99")
         .flag("-Wall")
         .flag("-Wextra")
         .flag("-Wno-unused-parameter")
@@ -19,11 +19,12 @@ fn complie() {
         .flag("-DNDEBUG")
         .flag("-D_GNU_SOURCE")
         .flag("-D_FILE_OFFSET_BITS=64")
-        .flag("-mpopcnt")
         .flag("-DVERSION=\"1.2.1\"")
         .static_flag(true)
         .shared_flag(true)
-        .warnings(false);
+        .warnings(false)
+        .extra_warnings(false)
+        .cargo_warnings(false);
 
     if debug {
         b.debug(true);
@@ -33,16 +34,17 @@ fn complie() {
         b.opt_level(3);
     }
 
-    let target = std::env::var("TARGET").unwrap();
-    if target.contains("x86_64") {
-        if target.contains("aarch64") || target.contains("arm") {
-            // raise error
-            panic!("bsalign unsupport aarch64/arm cpu arch.")
-        }
+    #[cfg(target_arch = "x86_64")]
+    {
         b.flag("-msse4.2");
-    } else {
-        // raise error
-        panic!("bsalign unsupport non-x86_64 cpu arch.")
+        b.flag("-mpopcnt");
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        b.flag("-march=armv8-a+simd");
+        b.flag("-mfpu=neon");
+        b.flag("-mfloat-abi=softfp");
     }
 
     b.compile("bsalign");
