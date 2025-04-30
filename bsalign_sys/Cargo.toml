@@ -13,4 +13,4 @@ description = { workspace = true }
 
 [build-dependencies]
 bindgen = "0.71.1"
-cc = "1.2.17"
+cc = "1.2.20"
