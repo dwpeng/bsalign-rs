@@ -185,8 +185,8 @@ pub struct PsaAlignResult<'a> {
 
 impl<'a> PsaAlignResult<'a> {
     fn init_with(
-        qseq: &'a U1V,
         tseq: &'a U1V,
+        qseq: &'a U1V,
         cigars: &'a Cigars,
         result: seqalign_result_t,
     ) -> Self {
@@ -326,7 +326,7 @@ impl BsPairwirseAligner {
         self.tseq.clear();
     }
 
-    pub fn align_banded_striped_8bit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
+    pub fn align_banded_striped_8bit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -357,7 +357,7 @@ impl BsPairwirseAligner {
             )
         };
 
-        PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
+        PsaAlignResult::init_with(&self.tseq, &self.qseq, &self.cigars, r)
     }
 
     // // unsable for 2bit alignment, so commented out
@@ -393,7 +393,7 @@ impl BsPairwirseAligner {
     //     }
     // }
 
-    pub fn align_striped_edit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
+    pub fn align_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -421,7 +421,7 @@ impl BsPairwirseAligner {
         PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
     }
 
-    pub fn align_kmer_striped_edit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
+    pub fn align_kmer_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -445,7 +445,7 @@ impl BsPairwirseAligner {
                 0,
             )
         };
-        PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
+        PsaAlignResult::init_with(&self.tseq, &self.qseq, &self.cigars, r)
     }
 }
 
