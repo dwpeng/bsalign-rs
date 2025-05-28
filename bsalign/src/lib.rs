@@ -1,8 +1,11 @@
 mod align_mode;
 mod align_score;
-pub mod pairwise;
-pub mod poa;
 mod vector;
+
+#[cfg(target_arch = "x86_64")]
+pub mod pairwise;
+#[cfg(target_arch = "x86_64")]
+pub mod poa;
 
 pub use align_mode::AlignMode;
 pub use align_score::AlignScore;
