@@ -3,16 +3,16 @@ resolver = "2"
 members = ["bsalign", "bsalign_sys"]
 
 [workspace.package]
-version = "0.6.4"
+version = "0.6.5"
 edition = "2024"
 description = "Rust bindings for the bsalign C library"
 authors = ["dwpeng"]
 license = "MIT"
 repository = "https://github.com/dwpeng/bsalign-rs"
 readme = "README.md"
-keywords = ["alignment", "bioinformatics", "sequence", "bsalign"]
+keywords = ["alignment", "bioinformatics", "sequence", "bsalign", "poa"]
 categories = ["science", "api-bindings", "external-ffi-bindings"]
 homepage = "https://github.com/dwpeng/bsalign-rs"
 
 [workspace.dependencies]
-bsalign_sys = { path = "./bsalign_sys", version = "0.6.4" }
+bsalign_sys = { path = "./bsalign_sys", version = "0.6.5" }
