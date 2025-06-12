@@ -16,3 +16,7 @@ homepage = "https://github.com/dwpeng/bsalign-rs"
 
 [workspace.dependencies]
 bsalign_sys = { path = "./bsalign_sys", version = "0.6.5" }
+
+clap = { version = "4.5.40", features = ["derive"] }
+noodles = { version = "0.99.0", features = ["fasta"] }
+anyhow = { version = "1.0.83" }
