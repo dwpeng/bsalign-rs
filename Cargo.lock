@@ -101,7 +101,7 @@ checksum = "5c8214115b7bf84099f1309324e63141d4c5d7cc26862f97a0a857dbefe165bd"
 
 [[package]]
 name = "bsalign"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "anyhow",
  "bsalign_sys",
@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "bsalign_sys"
-version = "0.6.5"
+version = "0.6.6"
 dependencies = [
  "bindgen",
  "cc",
