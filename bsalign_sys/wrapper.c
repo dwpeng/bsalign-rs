@@ -11,14 +11,13 @@ u4i bspoa_msa(BSPOA *poa) { return msa_bspoa(poa); }
 void bspoa_simple_cns(BSPOA *poa) { simple_cns_bspoa(poa); }
 void bspoa_tidy_msa(BSPOA *poa) { tidy_msa_bspoa(poa); }
 void bspoa_call_snvs(BSPOA *poa) { call_snvs_bspoa(poa); }
-void bspoa_print_snvs(BSPOA *poa, char *label, const char *filename) {
-  FILE *out = fopen(filename, "wb");
-  print_snvs_bspoa(poa, label, out);
-  fclose(out);
+void bspoa_print_snvs(BSPOA *poa, char *label, c_file_t *fp) {
+  print_snvs_bspoa(poa, label, fp->fp);
 }
 void bspoa_print_msa(BSPOA *poa, char *label, u4i mbeg, u4i mend, u4i linewidth,
-                     int colorful, FILE *out) {
-  print_msa_bspoa(poa, label, mbeg, mend, linewidth, colorful, out);
+                     int colorful, c_file_t *fp) {
+
+  print_msa_bspoa(poa, label, mbeg, mend, linewidth, colorful, fp->fp);
 }
 void bspoa_begin(BSPOA *poa) { beg_bspoa(poa); }
 void bspoa_end(BSPOA *poa) { end_bspoa(poa); }
@@ -129,4 +128,38 @@ const char *bsalign_version() {
 #else
   return "unknown";
 #endif
+}
+
+c_file_t *c_file_open(const char *path) {
+  c_file_t *cfile = (c_file_t *)malloc(sizeof(c_file_t));
+  if (!cfile) {
+    fprintf(stderr, "Memory allocation failed for c_file_t\n");
+    return NULL;
+  }
+  cfile->path = strdup(path);
+  if (strcmp(path, "-") == 0) {
+    cfile->closeable = 0;
+    cfile->fp = stdout; // Use stdout for "-" path
+  } else {
+    cfile->closeable = 1;
+    cfile->fp = fopen(path, "w");
+    if (!cfile->fp) {
+      fprintf(stderr, "Cannot open file %s\n", path);
+      free(cfile->path);
+      free(cfile);
+      exit(1);
+    }
+  }
+  return cfile;
+}
+
+void c_file_close(c_file_t *file) {
+  if (file) {
+    fflush(file->fp);
+    if (file->fp && file->closeable) {
+      fclose(file->fp);
+    }
+    free(file->path);
+    free(file);
+  }
 }

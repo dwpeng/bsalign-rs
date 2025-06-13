@@ -2,10 +2,12 @@ use bsalign::pairwise::{BsPairwirseAligner, BsPairwiseParam};
 use bsalign::poa::{BsPoaAligner, BsPoaParam};
 use bsalign::{AlignMode, AlignScore};
 
+use bsalign_sys::bindings;
 use clap::ValueEnum;
 use clap::*;
 use noodles::fasta::io::reader::Builder as FastaReaderBuilder;
 use noodles::fasta::record::Record;
+use std::os::raw::c_char;
 
 #[derive(Parser)]
 struct Cli {
@@ -44,8 +46,8 @@ enum Commands {
             hide_possible_values = true,
             help = "Align mode: global/extend/overlap"
         )]
-        mode: Option<AlignCliMode>,
-        /// Bandwidth for overlap alignment
+        mode: AlignCliMode,
+        /// Bandwidth for alignment
         #[arg(short = 'W', default_value_t = 0)]
         bandwidth: i32,
         /// Match score
@@ -74,14 +76,59 @@ enum Commands {
     Edit {
         /// Align mode
         #[arg(short, long, default_value = "global")]
-        mode: Option<AlignCliMode>,
-        /// Bandwidth for overlap alignment
+        mode: AlignCliMode,
+        /// Bandwidth for alignment
         #[arg(short = 'W', default_value_t = 0)]
         bandwidth: i32,
         /// Kmer size (<=15)
         #[arg(short = 'k', default_value_t = 13)]
         ksize: usize,
         /// input fasta files
+        #[arg(required = true)]
+        files: Vec<String>,
+    },
+    Poa {
+        /// Align mode
+        #[arg(
+            short,
+            long,
+            default_value = "global",
+            hide_long_help = true,
+            hide_possible_values = true,
+            help = "Align mode: global/extend/overlap"
+        )]
+        mode: AlignCliMode,
+        /// Bandwidth for alignment
+        #[arg(short = 'W', default_value_t = 128)]
+        bandwidth: i32,
+        /// Match score
+        #[arg(short = 'M', default_value_t = 2)]
+        match_score: i32,
+        /// Mismatch score
+        #[arg(short = 'X', default_value_t = -6)]
+        mismatch_score: i32,
+        /// Gap open score
+        #[arg(short = 'O', default_value_t = -3)]
+        gap_open_score: i32,
+        /// Gap extend score
+        #[arg(short = 'E', default_value_t = -2)]
+        gap_extend_score: i32,
+        /// Penalty for gap2 open
+        #[arg(short = 'Q', default_value_t = 0)]
+        gap2_open_score: i32,
+        /// Penalty for gap2 extension
+        #[arg(short = 'P', default_value_t = 0)]
+        gap2_extend_score: i32,
+        /// Print MSA in 'one seq one line'
+        #[arg(short = 'L')]
+        line_format: bool,
+        /// Limit the number of sequence to align
+        #[arg(short = 'n', default_value_t = 0)]
+        limit: usize,
+        /// The output file name [default: stdout]
+        #[arg(short = 'o')]
+        output: Option<String>,
+        /// fasta files
         #[arg(required = true)]
         files: Vec<String>,
     },
@@ -226,8 +273,8 @@ fn main() {
             files,
         } => {
             match mode {
-                Some(AlignCliMode::Kmer) => {
-                    eprintln!("Only `Edit` command supports kmer mode");
+                AlignCliMode::Kmer => {
+                    eprintln!("Only `edit` command supports kmer mode");
                     std::process::exit(1);
                 }
                 _ => {}
@@ -236,7 +283,7 @@ fn main() {
             align(
                 &records[0],
                 &records[1],
-                mode.unwrap_or(AlignCliMode::Overlap),
+                mode,
                 bandwidth,
                 match_score,
                 mismatch_score,
@@ -253,13 +300,75 @@ fn main() {
             files,
         } => {
             let records = read_records(files, 2);
-            edit(
-                &records[0],
-                &records[1],
-                mode.unwrap_or(AlignCliMode::Overlap),
-                bandwidth,
-                ksize,
-            );
+            edit(&records[0], &records[1], mode, bandwidth, ksize);
+        }
+        Commands::Poa {
+            mode,
+            bandwidth,
+            match_score,
+            mismatch_score,
+            gap_open_score,
+            gap_extend_score,
+            gap2_open_score,
+            gap2_extend_score,
+            line_format,
+            limit,
+            files,
+            output,
+        } => {
+            let mut align_score = AlignScore::poa_default();
+            align_score.M = match_score;
+            align_score.X = mismatch_score;
+            align_score.O = gap_open_score;
+            align_score.E = gap_extend_score;
+            align_score.Q = gap2_open_score;
+            align_score.P = gap2_extend_score;
+
+            let mut poa_params = BsPoaParam::default();
+            poa_params = poa_params
+                .set_bandwidth(bandwidth as u32)
+                .set_score(align_score)
+                .set_alnmode(mode.into());
+
+            let mut poa = BsPoaAligner::new(poa_params);
+            let limit = if limit == 0 { usize::MAX } else { limit };
+            let mut count = 0;
+            for file in files {
+                let mut reader = FastaReaderBuilder::default()
+                    .build_from_path(file)
+                    .expect("Failed to open file");
+                for record in reader.records() {
+                    let record = record.expect("Failed to read record");
+                    poa.add_sequence(record.sequence());
+                    count += 1;
+                    if count >= limit {
+                        break;
+                    }
+                }
+            }
+            poa.align();
+            poa.tidy_msa();
+            poa.call_snvs();
+            let output = match output {
+                Some(file) => file,
+                None => String::from("-\0"),
+            };
+            let linewidth = if line_format { 0 } else { 100 };
+            unsafe {
+                let mut label = String::from("BSALIGN");
+                let cfile = bindings::c_file_open(output.as_ptr() as *mut c_char);
+                bindings::bspoa_print_msa(
+                    poa.poa,
+                    label.as_mut_ptr() as *mut c_char,
+                    0,
+                    0,
+                    linewidth,
+                    1,
+                    cfile,
+                );
+                bindings::bspoa_print_snvs(poa.poa, label.as_mut_ptr() as *mut c_char, cfile);
+                bindings::c_file_close(cfile);
+            }
         }
     }
 }

@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    os::raw::c_char,
+};
 
 use crate::{AlignMode, AlignScore};
 use bsalign_sys::bindings;
@@ -22,7 +25,7 @@ impl DerefMut for BsPoaParam {
 #[derive(Debug)]
 pub struct BsPoaAligner {
     pub params: BsPoaParam,
-    poa: *mut bindings::BSPOA,
+    pub poa: *mut bindings::BSPOA,
     metainfo: Option<String>,
     aligned: bool,
 }
@@ -291,8 +294,8 @@ impl BsPoaAligner {
         };
         Alt { inner: a }
     }
-
-    pub fn print_snvs(&self, filename: &str, label: Option<&str>) {
+    /// Print SNVs to a file
+    pub fn print_snvs(&self, label: Option<&str>, filename: &str) {
         if !self.aligned {
             panic!("Align sequences before calling print_snvs, call `align` first");
         }
@@ -302,11 +305,10 @@ impl BsPoaAligner {
                 None => std::ffi::CString::new("SNV").unwrap(),
                 Some(s) => std::ffi::CString::new(s).unwrap(),
             };
-            bindings::bspoa_print_snvs(
-                self.poa,
-                clabel.as_ptr() as *mut i8,
-                cfilename.as_ptr() as *const i8,
-            );
+
+            let cfile = bindings::c_file_open(cfilename.as_ptr() as *mut c_char);
+
+            bindings::bspoa_print_snvs(self.poa, clabel.as_ptr() as *mut i8, cfile);
         }
     }
 }

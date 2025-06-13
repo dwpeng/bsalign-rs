@@ -3,6 +3,15 @@
 #include "bsalign/bsalign.h"
 #include "bsalign/bspoa.h"
 
+typedef struct {
+  char *path;
+  FILE *fp;
+  int closeable;
+} c_file_t;
+
+c_file_t *c_file_open(const char *path);
+void c_file_close(c_file_t *file);
+
 void bs_epi8_seqalign_set_score_matrix(int8_t m[16], int8_t match,
                                        int8_t mismatch);
 seqalign_result_t
@@ -51,9 +60,9 @@ void bspoa_simple_cns(BSPOA *poa);
 u4i bspoa_msa(BSPOA *poa);
 void bspoa_tidy_msa(BSPOA *poa);
 void bspoa_call_snvs(BSPOA *poa);
-void bspoa_print_snvs(BSPOA *poa, char *label, const char *filename);
+void bspoa_print_snvs(BSPOA *poa, char *label, c_file_t *fp);
 void bspoa_print_msa(BSPOA *poa, char *label, u4i mbeg, u4i mend, u4i linewidth,
-                     int colorful, FILE *out);
+                     int colorful, c_file_t *fp);
 void bspoa_begin(BSPOA *poa);
 void bspoa_end(BSPOA *poa);
 void bspoa_dump_binary_msa(BSPOA *poa, char *metadata, u4i metalen,
@@ -67,4 +76,5 @@ void string_free(String *s);
 String *string_init(size_t size);
 
 const char *bsalign_version();
+
 #endif

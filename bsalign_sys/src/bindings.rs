@@ -15185,6 +15185,36 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub static mut MM_EPI8_ALL3: xint;
 }
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct c_file_t {
+    pub path: *mut ::std::os::raw::c_char,
+    pub fp: *mut FILE,
+    pub closeable: ::std::os::raw::c_int,
+}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of c_file_t"][::std::mem::size_of::<c_file_t>() - 24usize];
+    ["Alignment of c_file_t"][::std::mem::align_of::<c_file_t>() - 8usize];
+    ["Offset of field: c_file_t::path"][::std::mem::offset_of!(c_file_t, path) - 0usize];
+    ["Offset of field: c_file_t::fp"][::std::mem::offset_of!(c_file_t, fp) - 8usize];
+    ["Offset of field: c_file_t::closeable"][::std::mem::offset_of!(c_file_t, closeable) - 16usize];
+};
+impl Default for c_file_t {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+unsafe extern "C" {
+    pub fn c_file_open(path: *const ::std::os::raw::c_char) -> *mut c_file_t;
+}
+unsafe extern "C" {
+    pub fn c_file_close(file: *mut c_file_t);
+}
 unsafe extern "C" {
     pub fn bs_epi8_seqalign_set_score_matrix(m: *mut i8, match_: i8, mismatch: i8);
 }
@@ -15306,11 +15336,7 @@ unsafe extern "C" {
     pub fn bspoa_call_snvs(poa: *mut BSPOA);
 }
 unsafe extern "C" {
-    pub fn bspoa_print_snvs(
-        poa: *mut BSPOA,
-        label: *mut ::std::os::raw::c_char,
-        filename: *const ::std::os::raw::c_char,
-    );
+    pub fn bspoa_print_snvs(poa: *mut BSPOA, label: *mut ::std::os::raw::c_char, fp: *mut c_file_t);
 }
 unsafe extern "C" {
     pub fn bspoa_print_msa(
@@ -15320,7 +15346,7 @@ unsafe extern "C" {
         mend: u4i,
         linewidth: u4i,
         colorful: ::std::os::raw::c_int,
-        out: *mut FILE,
+        fp: *mut c_file_t,
     );
 }
 unsafe extern "C" {
