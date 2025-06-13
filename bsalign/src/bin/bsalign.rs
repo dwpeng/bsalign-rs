@@ -122,6 +122,9 @@ enum Commands {
         /// Print MSA in 'one seq one line'
         #[arg(short = 'L')]
         line_format: bool,
+        /// Print MSA with color
+        #[arg(short = 'C')]
+        color: bool,
         /// Limit the number of sequence to align
         #[arg(short = 'n', default_value_t = 0)]
         limit: usize,
@@ -312,6 +315,7 @@ fn main() {
             gap2_open_score,
             gap2_extend_score,
             line_format,
+            color,
             limit,
             files,
             output,
@@ -349,21 +353,22 @@ fn main() {
             poa.align();
             poa.tidy_msa();
             poa.call_snvs();
-            let output = match output {
-                Some(file) => file,
-                None => String::from("-\0"),
+            let (color, output) = match output {
+                Some(file) => (0, file),
+                None => (color as i32, String::from("-\0")),
             };
             let linewidth = if line_format { 0 } else { 100 };
             unsafe {
                 let mut label = String::from("BSALIGN");
                 let cfile = bindings::c_file_open(output.as_ptr() as *mut c_char);
+
                 bindings::bspoa_print_msa(
                     poa.poa,
                     label.as_mut_ptr() as *mut c_char,
                     0,
                     0,
                     linewidth,
-                    1,
+                    color,
                     cfile,
                 );
                 bindings::bspoa_print_snvs(poa.poa, label.as_mut_ptr() as *mut c_char, cfile);
