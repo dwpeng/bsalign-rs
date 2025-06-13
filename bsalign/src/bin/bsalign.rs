@@ -3,7 +3,6 @@ use bsalign::poa::{BsPoaAligner, BsPoaParam};
 use bsalign::{AlignMode, AlignScore};
 
 use bsalign_sys::bindings;
-use clap::ValueEnum;
 use clap::*;
 use noodles::fasta::io::reader::Builder as FastaReaderBuilder;
 use noodles::fasta::record::Record;
@@ -119,18 +118,18 @@ enum Commands {
         /// Penalty for gap2 extension
         #[arg(short = 'P', default_value_t = 0)]
         gap2_extend_score: i32,
-        /// Print MSA in 'one seq one line'
-        #[arg(short = 'L')]
-        line_format: bool,
-        /// Print MSA with color
-        #[arg(short = 'C')]
-        color: bool,
         /// Limit the number of sequence to align
         #[arg(short = 'n', default_value_t = 0)]
         limit: usize,
         /// The output file name [default: stdout]
         #[arg(short = 'o')]
         output: Option<String>,
+        /// Print MSA in 'one seq one line'
+        #[arg(short = 'L')]
+        line_format: bool,
+        /// Print MSA with color
+        #[arg(short = 'C')]
+        color: bool,
         /// fasta files
         #[arg(required = true)]
         files: Vec<String>,
