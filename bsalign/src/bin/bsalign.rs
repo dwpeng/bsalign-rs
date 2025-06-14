@@ -86,6 +86,7 @@ enum Commands {
         #[arg(required = true)]
         files: Vec<String>,
     },
+    /// Partial order alignment (multi-sequence alignment)
     Poa {
         /// Align mode
         #[arg(
