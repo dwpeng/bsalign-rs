@@ -7,6 +7,10 @@ A rust binding for the [bsalign](https://github.com/ruanjue/bsalign) library.
 ```bash
 cargo install bsalign
 ```
+or install as library
+```bash
+cargo add bsalign
+```
 
 ## Pairwise sequence alignment
 
