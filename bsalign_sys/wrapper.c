@@ -163,3 +163,28 @@ void c_file_close(c_file_t *file) {
     free(file);
   }
 }
+
+unsigned char *bspoa_get_rid_alignment(BSPOA *g, int rid, size_t *len) {
+  u4i mbeg = 0;
+  u4i mend = 0;
+  if (mend == 0 || mend > g->msaidxs->size) {
+    mend = g->msaidxs->size;
+  }
+  clear_string(g->strs);
+  u4i i, nseq, mrow;
+  u1i *col;
+  char ch;
+  nseq = g->seqs->nseq;
+  mrow = g->seqs->nseq + 3;
+  for (i = mbeg; i < mend; i++) {
+    col = g->msacols->buffer + g->msaidxs->buffer[i] * mrow;
+    if (col[rid] <= 4 && col[rid] != col[nseq]) {
+      ch = "acgt-.*"[col[rid]];
+    } else {
+      ch = "ACGT-.*"[col[rid]];
+    }
+    add_char_string(g->strs, ch);
+  }
+  *len = g->strs->size;
+  return g->strs->string;
+}

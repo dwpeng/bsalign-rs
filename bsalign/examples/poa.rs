@@ -3,11 +3,16 @@ use bsalign::poa::{BsPoaAligner, BsPoaParam};
 fn main() {
     let param = BsPoaParam::default();
     let mut poa = BsPoaAligner::new(param);
-    let seq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
-    poa.add_sequence(seq);
-    poa.add_sequence(seq);
-    poa.add_sequence(seq);
+    let seq1 = "ACGTACGTACGTACCGTACGTACGTACGTACGTACGTACGTACGT";
+    let seq2 = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let seq3 = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+
+    poa.add_sequence(seq1);
+    poa.add_sequence(seq2);
+    poa.add_sequence(seq3);
     poa.align();
+    poa.msa();
+    poa.call_cns();
     let consensus = poa.get_cns();
     let consensus = consensus.as_string();
     println!("CNS: {}", consensus);
@@ -17,4 +22,8 @@ fn main() {
     let alt = poa.get_alt();
     let alt = alt.as_string();
     println!("ALT: {}", alt);
+    for i in 0..3 {
+        let alignment = poa.get_alignment(i).unwrap();
+        println!("     {}", alignment.as_string());
+    }
 }

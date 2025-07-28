@@ -77,4 +77,5 @@ String *string_init(size_t size);
 
 const char *bsalign_version();
 
+unsigned char *bspoa_get_rid_alignment(BSPOA *g, int rid, size_t *len);
 #endif

@@ -28,6 +28,7 @@ pub struct BsPoaAligner {
     pub poa: *mut bindings::BSPOA,
     metainfo: Option<String>,
     aligned: bool,
+    nseq: usize,
 }
 
 impl Drop for BsPoaAligner {
@@ -50,6 +51,7 @@ impl BsPoaAligner {
             poa,
             metainfo: None,
             aligned: false,
+            nseq: 0,
         }
     }
 }
@@ -155,6 +157,24 @@ impl<'a> Alt<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct AlignmentString<'a> {
+    inner: &'a [u8],
+}
+
+impl<'a> AlignmentString<'a> {
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    pub fn as_string(&self) -> String {
+        unsafe {
+            let s = str::from_utf8_unchecked(self.inner);
+            s.into()
+        }
+    }
+}
+
 impl BsPoaAligner {
     pub fn add_sequence<T>(&mut self, seq: &T)
     where
@@ -165,6 +185,7 @@ impl BsPoaAligner {
             bindings::bspoa_add_sequence(self.poa, s.as_ptr(), s.len() as u32);
             self.aligned = false;
         }
+        self.nseq += 1;
     }
 
     pub fn reset(&mut self) {
@@ -191,7 +212,7 @@ impl BsPoaAligner {
         }
     }
 
-    pub fn mas(&mut self) -> u32 {
+    pub fn msa(&mut self) -> u32 {
         if !self.aligned {
             panic!("Align sequences before calling msa, call `align` first");
         }
@@ -281,6 +302,22 @@ impl BsPoaAligner {
             std::slice::from_raw_parts(qlt, len as usize)
         };
         Quality { inner: q }
+    }
+
+    pub fn get_alignment(&mut self, idx: usize) -> Option<AlignmentString<'_>> {
+        if !self.aligned {
+            panic!("Align sequences before calling get_qlt, call `align` first");
+        }
+        if idx > self.nseq {
+            return None;
+        }
+        let idx = idx + 1;
+        let mut len: usize = 0;
+        let inner = unsafe {
+            let buffer = bindings::bspoa_get_rid_alignment(self.poa, idx as i32, &mut len);
+            std::slice::from_raw_parts(buffer, len)
+        };
+        Some(AlignmentString { inner })
     }
 
     pub fn get_alt(&self) -> Alt<'_> {

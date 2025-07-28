@@ -326,7 +326,7 @@ impl BsPairwirseAligner {
         self.tseq.clear();
     }
 
-    pub fn align_banded_striped_8bit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
+    pub fn align_banded_striped_8bit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult<'_>
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -393,7 +393,7 @@ impl BsPairwirseAligner {
     //     }
     // }
 
-    pub fn align_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
+    pub fn align_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult<'_>
     where
         T: AsRef<[u8]> + ?Sized,
     {
@@ -421,7 +421,7 @@ impl BsPairwirseAligner {
         PsaAlignResult::init_with(&self.qseq, &self.tseq, &self.cigars, r)
     }
 
-    pub fn align_kmer_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult
+    pub fn align_kmer_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult<'_>
     where
         T: AsRef<[u8]> + ?Sized,
     {

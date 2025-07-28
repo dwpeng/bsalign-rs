@@ -135,9 +135,6 @@ where
         }
     }
 }
-#[derive(PartialEq, Copy, Clone, Hash, Debug, Default)]
-#[repr(transparent)]
-pub struct __BindgenFloat16(pub u16);
 pub const _FEATURES_H: u8 = 1;
 pub const _DEFAULT_SOURCE: u8 = 1;
 pub const __GLIBC_USE_ISOC2X: u8 = 0;
@@ -157,13 +154,11 @@ pub const __WORDSIZE: u8 = 64;
 pub const __WORDSIZE_TIME64_COMPAT32: u8 = 1;
 pub const __SYSCALL_WORDSIZE: u8 = 64;
 pub const __TIMESIZE: u8 = 64;
-pub const __USE_TIME_BITS64: u8 = 1;
 pub const __USE_MISC: u8 = 1;
 pub const __USE_ATFILE: u8 = 1;
 pub const __USE_FORTIFY_LEVEL: u8 = 0;
 pub const __GLIBC_USE_DEPRECATED_GETS: u8 = 1;
 pub const __GLIBC_USE_DEPRECATED_SCANF: u8 = 0;
-pub const __GLIBC_USE_C2X_STRTOL: u8 = 0;
 pub const _STDC_PREDEF_H: u8 = 1;
 pub const __STDC_IEC_559__: u8 = 1;
 pub const __STDC_IEC_60559_BFP__: u32 = 201404;
@@ -172,7 +167,7 @@ pub const __STDC_IEC_60559_COMPLEX__: u32 = 201404;
 pub const __STDC_ISO_10646__: u32 = 201706;
 pub const __GNU_LIBRARY__: u8 = 6;
 pub const __GLIBC__: u8 = 2;
-pub const __GLIBC_MINOR__: u8 = 39;
+pub const __GLIBC_MINOR__: u8 = 36;
 pub const _SYS_CDEFS_H: u8 = 1;
 pub const __glibc_c99_flexarr_available: u8 = 1;
 pub const __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI: u8 = 0;
@@ -275,7 +270,6 @@ pub const _STRINGS_H: u8 = 1;
 pub const _STDINT_H: u8 = 1;
 pub const _BITS_WCHAR_H: u8 = 1;
 pub const _BITS_STDINT_UINTN_H: u8 = 1;
-pub const _BITS_STDINT_LEAST_H: u8 = 1;
 pub const INT8_MIN: i8 = -128;
 pub const INT16_MIN: i16 = -32768;
 pub const INT32_MIN: i32 = -2147483648;
@@ -314,6 +308,7 @@ pub const SIZE_MAX: i8 = -1;
 pub const WINT_MIN: u8 = 0;
 pub const WINT_MAX: u32 = 4294967295;
 pub const _STDIO_H: u8 = 1;
+pub const __GNUC_VA_LIST: u8 = 1;
 pub const _____fpos_t_defined: u8 = 1;
 pub const ____mbstate_t_defined: u8 = 1;
 pub const _____fpos64_t_defined: u8 = 1;
@@ -323,7 +318,6 @@ pub const __struct_FILE_defined: u8 = 1;
 pub const _IO_EOF_SEEN: u8 = 16;
 pub const _IO_ERR_SEEN: u8 = 32;
 pub const _IO_USER_LOCK: u16 = 32768;
-pub const __cookie_io_functions_t_defined: u8 = 1;
 pub const _IOFBF: u8 = 0;
 pub const _IOLBF: u8 = 1;
 pub const _IONBF: u8 = 2;
@@ -333,9 +327,9 @@ pub const SEEK_SET: u8 = 0;
 pub const SEEK_CUR: u8 = 1;
 pub const SEEK_END: u8 = 2;
 pub const P_tmpdir: &[u8; 5] = b"/tmp\0";
+pub const _BITS_STDIO_LIM_H: u8 = 1;
 pub const L_tmpnam: u8 = 20;
 pub const TMP_MAX: u32 = 238328;
-pub const _BITS_STDIO_LIM_H: u8 = 1;
 pub const FILENAME_MAX: u16 = 4096;
 pub const L_ctermid: u8 = 9;
 pub const FOPEN_MAX: u8 = 16;
@@ -390,8 +384,6 @@ pub const DEFFILEMODE: u16 = 438;
 pub const S_BLKSIZE: u16 = 512;
 pub const _SYS_MMAN_H: u8 = 1;
 pub const MAP_32BIT: u8 = 64;
-pub const MAP_ABOVE4G: u8 = 128;
-pub const SHADOW_STACK_SET_TOKEN: u8 = 1;
 pub const MAP_GROWSDOWN: u16 = 256;
 pub const MAP_DENYWRITE: u16 = 2048;
 pub const MAP_EXECUTABLE: u16 = 4096;
@@ -444,7 +436,6 @@ pub const MADV_PAGEOUT: u8 = 21;
 pub const MADV_POPULATE_READ: u8 = 22;
 pub const MADV_POPULATE_WRITE: u8 = 23;
 pub const MADV_DONTNEED_LOCKED: u8 = 24;
-pub const MADV_COLLAPSE: u8 = 25;
 pub const MADV_HWPOISON: u8 = 100;
 pub const POSIX_MADV_NORMAL: u8 = 0;
 pub const POSIX_MADV_RANDOM: u8 = 1;
@@ -2448,12 +2439,6 @@ unsafe extern "C" {
     ) -> *mut ::std::os::raw::c_char;
 }
 unsafe extern "C" {
-    pub fn strchrnul(
-        __s: *const ::std::os::raw::c_char,
-        __c: ::std::os::raw::c_int,
-    ) -> *mut ::std::os::raw::c_char;
-}
-unsafe extern "C" {
     pub fn strcspn(
         __s: *const ::std::os::raw::c_char,
         __reject: *const ::std::os::raw::c_char,
@@ -2496,34 +2481,6 @@ unsafe extern "C" {
         __delim: *const ::std::os::raw::c_char,
         __save_ptr: *mut *mut ::std::os::raw::c_char,
     ) -> *mut ::std::os::raw::c_char;
-}
-unsafe extern "C" {
-    pub fn strcasestr(
-        __haystack: *const ::std::os::raw::c_char,
-        __needle: *const ::std::os::raw::c_char,
-    ) -> *mut ::std::os::raw::c_char;
-}
-unsafe extern "C" {
-    pub fn memmem(
-        __haystack: *const ::std::os::raw::c_void,
-        __haystacklen: usize,
-        __needle: *const ::std::os::raw::c_void,
-        __needlelen: usize,
-    ) -> *mut ::std::os::raw::c_void;
-}
-unsafe extern "C" {
-    pub fn __mempcpy(
-        __dest: *mut ::std::os::raw::c_void,
-        __src: *const ::std::os::raw::c_void,
-        __n: usize,
-    ) -> *mut ::std::os::raw::c_void;
-}
-unsafe extern "C" {
-    pub fn mempcpy(
-        __dest: *mut ::std::os::raw::c_void,
-        __src: *const ::std::os::raw::c_void,
-        __n: ::std::os::raw::c_ulong,
-    ) -> *mut ::std::os::raw::c_void;
 }
 unsafe extern "C" {
     pub fn strlen(__s: *const ::std::os::raw::c_char) -> ::std::os::raw::c_ulong;
@@ -2652,20 +2609,6 @@ unsafe extern "C" {
         __n: ::std::os::raw::c_ulong,
     ) -> *mut ::std::os::raw::c_char;
 }
-unsafe extern "C" {
-    pub fn strlcpy(
-        __dest: *mut ::std::os::raw::c_char,
-        __src: *const ::std::os::raw::c_char,
-        __n: usize,
-    ) -> usize;
-}
-unsafe extern "C" {
-    pub fn strlcat(
-        __dest: *mut ::std::os::raw::c_char,
-        __src: *const ::std::os::raw::c_char,
-        __n: usize,
-    ) -> usize;
-}
 pub type int_least8_t = __int_least8_t;
 pub type int_least16_t = __int_least16_t;
 pub type int_least32_t = __int_least32_t;
@@ -2684,6 +2627,7 @@ pub type uint_fast32_t = ::std::os::raw::c_ulong;
 pub type uint_fast64_t = ::std::os::raw::c_ulong;
 pub type intmax_t = __intmax_t;
 pub type uintmax_t = __uintmax_t;
+pub type va_list = __builtin_va_list;
 pub type __gnuc_va_list = __builtin_va_list;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -2894,55 +2838,6 @@ impl Default for _IO_FILE {
         }
     }
 }
-pub type cookie_read_function_t = ::std::option::Option<
-    unsafe extern "C" fn(
-        __cookie: *mut ::std::os::raw::c_void,
-        __buf: *mut ::std::os::raw::c_char,
-        __nbytes: usize,
-    ) -> __ssize_t,
->;
-pub type cookie_write_function_t = ::std::option::Option<
-    unsafe extern "C" fn(
-        __cookie: *mut ::std::os::raw::c_void,
-        __buf: *const ::std::os::raw::c_char,
-        __nbytes: usize,
-    ) -> __ssize_t,
->;
-pub type cookie_seek_function_t = ::std::option::Option<
-    unsafe extern "C" fn(
-        __cookie: *mut ::std::os::raw::c_void,
-        __pos: *mut __off64_t,
-        __w: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int,
->;
-pub type cookie_close_function_t = ::std::option::Option<
-    unsafe extern "C" fn(__cookie: *mut ::std::os::raw::c_void) -> ::std::os::raw::c_int,
->;
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone)]
-pub struct _IO_cookie_io_functions_t {
-    pub read: cookie_read_function_t,
-    pub write: cookie_write_function_t,
-    pub seek: cookie_seek_function_t,
-    pub close: cookie_close_function_t,
-}
-#[allow(clippy::unnecessary_operation, clippy::identity_op)]
-const _: () = {
-    ["Size of _IO_cookie_io_functions_t"]
-        [::std::mem::size_of::<_IO_cookie_io_functions_t>() - 32usize];
-    ["Alignment of _IO_cookie_io_functions_t"]
-        [::std::mem::align_of::<_IO_cookie_io_functions_t>() - 8usize];
-    ["Offset of field: _IO_cookie_io_functions_t::read"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, read) - 0usize];
-    ["Offset of field: _IO_cookie_io_functions_t::write"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, write) - 8usize];
-    ["Offset of field: _IO_cookie_io_functions_t::seek"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, seek) - 16usize];
-    ["Offset of field: _IO_cookie_io_functions_t::close"]
-        [::std::mem::offset_of!(_IO_cookie_io_functions_t, close) - 24usize];
-};
-pub type cookie_io_functions_t = _IO_cookie_io_functions_t;
-pub type va_list = __gnuc_va_list;
 pub type fpos_t = __fpos_t;
 unsafe extern "C" {
     pub static mut stdin: *mut FILE;
@@ -3010,13 +2905,6 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub fn fdopen(__fd: ::std::os::raw::c_int, __modes: *const ::std::os::raw::c_char)
         -> *mut FILE;
-}
-unsafe extern "C" {
-    pub fn fopencookie(
-        __magic_cookie: *mut ::std::os::raw::c_void,
-        __modes: *const ::std::os::raw::c_char,
-        __io_funcs: cookie_io_functions_t,
-    ) -> *mut FILE;
 }
 unsafe extern "C" {
     pub fn fmemopen(
@@ -3099,27 +2987,6 @@ unsafe extern "C" {
         __maxlen: ::std::os::raw::c_ulong,
         __format: *const ::std::os::raw::c_char,
         __arg: *mut __va_list_tag,
-    ) -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    pub fn vasprintf(
-        __ptr: *mut *mut ::std::os::raw::c_char,
-        __f: *const ::std::os::raw::c_char,
-        __arg: *mut __va_list_tag,
-    ) -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    pub fn __asprintf(
-        __ptr: *mut *mut ::std::os::raw::c_char,
-        __fmt: *const ::std::os::raw::c_char,
-        ...
-    ) -> ::std::os::raw::c_int;
-}
-unsafe extern "C" {
-    pub fn asprintf(
-        __ptr: *mut *mut ::std::os::raw::c_char,
-        __fmt: *const ::std::os::raw::c_char,
-        ...
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
@@ -4053,7 +3920,6 @@ pub const SEGV_ADIDERR: _bindgen_ty_4 = 6;
 pub const SEGV_ADIPERR: _bindgen_ty_4 = 7;
 pub const SEGV_MTEAERR: _bindgen_ty_4 = 8;
 pub const SEGV_MTESERR: _bindgen_ty_4 = 9;
-pub const SEGV_CPERR: _bindgen_ty_4 = 10;
 pub type _bindgen_ty_4 = ::std::os::raw::c_uint;
 pub const BUS_ADRALN: _bindgen_ty_5 = 1;
 pub const BUS_ADRERR: _bindgen_ty_5 = 2;
@@ -10620,11 +10486,6 @@ pub type __v2du = [::std::os::raw::c_ulonglong; 2usize];
 pub type __v8hu = [::std::os::raw::c_ushort; 8usize];
 pub type __v16qu = [::std::os::raw::c_uchar; 16usize];
 pub type __v16qs = [::std::os::raw::c_schar; 16usize];
-pub type __v8hf = [__BindgenFloat16; 8usize];
-pub type __m128h = [__BindgenFloat16; 8usize];
-pub type __m128h_u = [__BindgenFloat16; 8usize];
-pub type __v8bf = u128;
-pub type __m128bh = u128;
 unsafe extern "C" {
     pub fn _mm_clflush(__p: *const ::std::os::raw::c_void);
 }
@@ -15387,6 +15248,13 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn bsalign_version() -> *const ::std::os::raw::c_char;
+}
+unsafe extern "C" {
+    pub fn bspoa_get_rid_alignment(
+        g: *mut BSPOA,
+        rid: ::std::os::raw::c_int,
+        len: *mut usize,
+    ) -> *mut ::std::os::raw::c_uchar;
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
