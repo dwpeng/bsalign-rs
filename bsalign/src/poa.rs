@@ -28,7 +28,7 @@ pub struct BsPoaAligner {
     pub poa: *mut bindings::BSPOA,
     metainfo: Option<String>,
     aligned: bool,
-    nseq: usize,
+    pub nseq: usize,
 }
 
 impl Drop for BsPoaAligner {
@@ -157,6 +157,24 @@ impl<'a> Alt<'a> {
     }
 }
 
+pub struct PoaAlignResult<'a> {
+    idx: usize,
+    poa: &'a BsPoaAligner,
+}
+
+impl<'a> Iterator for PoaAlignResult<'a> {
+    type Item = AlignmentString<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.idx >= self.poa.nseq {
+            return None;
+        }
+        let a = self.poa.get_alignment(self.idx);
+        self.idx += 1;
+        a
+    }
+}
+
 #[derive(Debug)]
 pub struct AlignmentString<'a> {
     inner: &'a [u8],
@@ -208,6 +226,13 @@ impl BsPoaAligner {
             bindings::bspoa_end(self.poa);
             self.aligned = true;
         }
+    }
+
+    pub fn get_alignment_result(&self) -> PoaAlignResult<'_> {
+        if !self.aligned {
+            panic!("Align sequences before calling dump_msa, call `align` first");
+        }
+        return PoaAlignResult { idx: 0, poa: self };
     }
 
     pub fn tidy_msa(&mut self) {
@@ -311,7 +336,7 @@ impl BsPoaAligner {
         Quality { inner: q }
     }
 
-    pub fn get_alignment(&mut self, idx: usize) -> Option<AlignmentString<'_>> {
+    pub fn get_alignment(&self, idx: usize) -> Option<AlignmentString<'_>> {
         if !self.aligned {
             panic!("Align sequences before calling get_qlt, call `align` first");
         }

@@ -26,4 +26,8 @@ fn main() {
         let alignment = poa.get_alignment(i).unwrap();
         println!("     {}", alignment.as_string());
     }
+    let ret = poa.get_alignment_result();
+    for alignment in ret {
+        println!("     {}", alignment.as_string());
+    }
 }
