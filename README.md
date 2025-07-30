@@ -52,7 +52,6 @@ fn main() {
     poa.add_sequence(seq2);
     poa.add_sequence(seq3);
     poa.align();
-    poa.msa();
     poa.call_cns();
     let consensus = poa.get_cns();
     let consensus = consensus.as_string();
