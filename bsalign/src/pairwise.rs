@@ -220,7 +220,7 @@ impl<'a> Display for PsaAlignResult<'a> {
 
 #[derive(Debug)]
 pub struct AlignmentString {
-    pub len: usize,
+    len: usize,
     tseq: U1V,
     alignment: U1V,
     qseq: U1V,
@@ -238,6 +238,10 @@ impl AlignmentString {
 }
 
 impl AlignmentString {
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
     pub fn tseq(&self) -> &str {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(
@@ -245,6 +249,10 @@ impl AlignmentString {
                 self.len as usize,
             ))
         }
+    }
+
+    pub fn tseq_bytes(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.tseq.buffer(), self.len as usize) }
     }
 
     pub fn qseq(&self) -> &str {
@@ -256,6 +264,10 @@ impl AlignmentString {
         }
     }
 
+    pub fn qseq_bytes(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.qseq.buffer(), self.len as usize) }
+    }
+
     pub fn alignment(&self) -> &str {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(
@@ -263,6 +275,10 @@ impl AlignmentString {
                 self.len as usize,
             ))
         }
+    }
+
+    pub fn alignment_bytes(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.alignment.buffer(), self.len as usize) }
     }
 }
 

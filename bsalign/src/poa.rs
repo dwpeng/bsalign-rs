@@ -173,6 +173,10 @@ impl<'a> AlignmentString<'a> {
             s.into()
         }
     }
+
+    pub fn as_bytes(&self) -> &'a [u8] {
+        self.inner
+    }
 }
 
 impl BsPoaAligner {
@@ -188,11 +192,14 @@ impl BsPoaAligner {
         self.nseq += 1;
     }
 
+    /// Reset poa so that start next loop align.
+    /// !!Note: Call this method before `add_sequence`
     pub fn reset(&mut self) {
         unsafe {
-            bindings::bspoa_clear(self.poa);
             self.aligned = false;
             self.metainfo = None;
+            self.nseq = 0;
+            bindings::bspoa_begin(self.poa);
         }
     }
 
