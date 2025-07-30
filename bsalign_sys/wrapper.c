@@ -16,7 +16,6 @@ void bspoa_print_snvs(BSPOA *poa, char *label, c_file_t *fp) {
 }
 void bspoa_print_msa(BSPOA *poa, char *label, u4i mbeg, u4i mend, u4i linewidth,
                      int colorful, c_file_t *fp) {
-
   print_msa_bspoa(poa, label, mbeg, mend, linewidth, colorful, fp->fp);
 }
 void bspoa_begin(BSPOA *poa) { beg_bspoa(poa); }
