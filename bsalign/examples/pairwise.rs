@@ -1,11 +1,12 @@
 use bsalign::pairwise::{BsPairwirseAligner, BsPairwiseParam};
 
 fn main() {
-    let seq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let tseq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let qseq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC";
     let param = BsPairwiseParam::default().set_ksize(4);
     let mut aligner = BsPairwirseAligner::new(param);
-    let result = aligner.align_banded_striped_8bit(&seq, &seq);
-    assert_eq!(result.aln, seq.len());
+    let result = aligner.align_banded_striped_8bit(&tseq, &qseq);
+    assert_eq!(result.aln, tseq.len());
     let alnstr = result.to_string();
     println!(
         "{}\n{}\n{}",

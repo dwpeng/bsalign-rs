@@ -272,8 +272,8 @@ impl<'a> PsaAlignResult<'a> {
         let alignment = AlignmentString::with_capacity(len);
         unsafe {
             let mut straln = [
-                alignment.tseq.buffer(),
                 alignment.qseq.buffer(),
+                alignment.tseq.buffer(),
                 alignment.alignment.buffer(),
             ];
             let mut ret = seqalign_result_t::default();
@@ -300,8 +300,8 @@ impl<'a> PsaAlignResult<'a> {
             bindings::bs_u1v_clear_and_encap(alignment.alignment.as_ptr(), len);
             bindings::bs_u1v_clear_and_encap(alignment.qseq.as_ptr(), len);
             let mut straln = [
-                alignment.tseq.buffer(),
                 alignment.qseq.buffer(),
+                alignment.tseq.buffer(),
                 alignment.alignment.buffer(),
             ];
             let mut ret = seqalign_result_t::default();
