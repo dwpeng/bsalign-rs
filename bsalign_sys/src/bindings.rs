@@ -15188,9 +15188,6 @@ unsafe extern "C" {
     pub fn bspoa_simple_cns(poa: *mut BSPOA);
 }
 unsafe extern "C" {
-    pub fn bspoa_msa(poa: *mut BSPOA) -> u4i;
-}
-unsafe extern "C" {
     pub fn bspoa_tidy_msa(poa: *mut BSPOA);
 }
 unsafe extern "C" {
