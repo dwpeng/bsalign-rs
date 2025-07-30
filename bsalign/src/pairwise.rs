@@ -319,7 +319,7 @@ impl<'a> PsaAlignResult<'a> {
 }
 
 impl BsPairwirseAligner {
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         self.mempool.clear();
         self.cigars.clear();
         self.qseq.clear();
@@ -330,6 +330,7 @@ impl BsPairwirseAligner {
     where
         T: AsRef<[u8]> + ?Sized,
     {
+        self.reset();
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {
@@ -397,6 +398,7 @@ impl BsPairwirseAligner {
     where
         T: AsRef<[u8]> + ?Sized,
     {
+        self.reset();
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {
@@ -425,6 +427,7 @@ impl BsPairwirseAligner {
     where
         T: AsRef<[u8]> + ?Sized,
     {
+        self.reset();
         let qseq = qseq.as_ref();
         let tseq = tseq.as_ref();
         unsafe {

@@ -68,8 +68,7 @@ macro_rules! generate_vector_type {
                     return;
                 }
                 unsafe {
-                    bindings::$free_fn(self.inner);
-                    self.inner = std::ptr::null_mut();
+                    bindings::$clear_fn(self.inner);
                 }
             }
         }
