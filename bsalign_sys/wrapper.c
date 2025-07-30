@@ -7,7 +7,7 @@ void bspoa_add_sequence(BSPOA *poa, const uint8_t *seq, u4i len) {
   push_bspoa(poa, (char *)seq, len);
 }
 double bspoa_cns(BSPOA *poa) { return cns_bspoa(poa); }
-u4i bspoa_msa(BSPOA *poa) { return msa_bspoa(poa); }
+// u4i bspoa_msa(BSPOA *poa) { return msa_bspoa(poa); }
 void bspoa_simple_cns(BSPOA *poa) { simple_cns_bspoa(poa); }
 void bspoa_tidy_msa(BSPOA *poa) { tidy_msa_bspoa(poa); }
 void bspoa_call_snvs(BSPOA *poa) { call_snvs_bspoa(poa); }

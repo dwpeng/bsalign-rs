@@ -244,14 +244,14 @@ impl BsPoaAligner {
         }
     }
 
-    pub fn msa(&mut self) -> u32 {
-        if !self.aligned {
-            panic!("Align sequences before calling msa, call `align` first");
-        }
-        unsafe {
-            return bindings::bspoa_msa(self.poa) as u32;
-        }
-    }
+    // pub fn msa(&mut self) -> u32 {
+    //     if !self.aligned {
+    //         panic!("Align sequences before calling msa, call `align` first");
+    //     }
+    //     unsafe {
+    //         return bindings::bspoa_msa(self.poa) as u32;
+    //     }
+    // }
 
     pub fn call_snvs(&mut self) {
         if !self.aligned {

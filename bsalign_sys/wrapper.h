@@ -57,7 +57,7 @@ void bspoa_clear(BSPOA *poa);
 void bspoa_add_sequence(BSPOA *poa, const uint8_t *seq, u4i len);
 double bspoa_cns(BSPOA *poa);
 void bspoa_simple_cns(BSPOA *poa);
-u4i bspoa_msa(BSPOA *poa);
+// u4i bspoa_msa(BSPOA *poa);
 void bspoa_tidy_msa(BSPOA *poa);
 void bspoa_call_snvs(BSPOA *poa);
 void bspoa_print_snvs(BSPOA *poa, char *label, c_file_t *fp);
