@@ -18,11 +18,12 @@ cargo add bsalign
 use bsalign::pairwise::{BsPairwirseAligner, BsPairwiseParam};
 
 fn main() {
-    let seq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let tseq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let qseq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTAC";
     let param = BsPairwiseParam::default().set_ksize(4);
     let mut aligner = BsPairwirseAligner::new(param);
-    let result = aligner.align_banded_striped_8bit(&seq, &seq);
-    assert_eq!(result.aln, seq.len());
+    let result = aligner.align_banded_striped_8bit(&tseq, &qseq);
+    assert_eq!(result.aln, tseq.len());
     let alnstr = result.to_string();
     println!(
         "{}\n{}\n{}",
@@ -32,6 +33,7 @@ fn main() {
     );
     println!("Alignment result: {}", result);
 }
+
 ```
 
 ## Multiple sequence alignment
@@ -42,11 +44,16 @@ use bsalign::poa::{BsPoaAligner, BsPoaParam};
 fn main() {
     let param = BsPoaParam::default();
     let mut poa = BsPoaAligner::new(param);
-    let seq = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
-    poa.add_sequence(seq);
-    poa.add_sequence(seq);
-    poa.add_sequence(seq);
+    let seq1 = "ACGTACGTACGTACCGTACGTACGTACGTACGTACGTACGTACGT";
+    let seq2 = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+    let seq3 = "ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT";
+
+    poa.add_sequence(seq1);
+    poa.add_sequence(seq2);
+    poa.add_sequence(seq3);
     poa.align();
+    poa.msa();
+    poa.call_cns();
     let consensus = poa.get_cns();
     let consensus = consensus.as_string();
     println!("CNS: {}", consensus);
@@ -56,5 +63,14 @@ fn main() {
     let alt = poa.get_alt();
     let alt = alt.as_string();
     println!("ALT: {}", alt);
+    for i in 0..3 {
+        let alignment = poa.get_alignment(i).unwrap();
+        println!("     {}", alignment.as_string());
+    }
+    let ret = poa.get_alignment_result();
+    for alignment in ret {
+        println!("     {}", alignment.as_string());
+    }
 }
+
 ```
