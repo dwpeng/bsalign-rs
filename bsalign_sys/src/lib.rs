@@ -4,6 +4,10 @@
 #![allow(dead_code)]
 #![allow(improper_ctypes)]
 #![allow(unsafe_op_in_unsafe_fn)]
+#![expect(
+    unnecessary_transmutes,
+    reason = "bindgen bitfields codegen under Rust 1.88+ - https://github.com/rust-lang/rust-bindgen/issues/3241"
+)]
 pub mod bindings {
     include!("bindings.rs");
 }
