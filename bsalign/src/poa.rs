@@ -70,16 +70,23 @@ fn base_from_2bit(base: u8) -> u8 {
 #[derive(Debug)]
 pub struct Consensus<'a> {
     inner: &'a [u8],
+    convert: bool,
 }
 
 impl<'a> Consensus<'a> {
     pub fn as_string(&self) -> String {
-        let mut s = String::with_capacity(self.len());
-        for i in 0..self.len() {
-            let base = self.get_base(i).unwrap();
-            s.push(base as char);
+        if self.convert {
+            let mut s = String::with_capacity(self.len());
+            for i in 0..self.len() {
+                let base = self.get_base(i).unwrap();
+                s.push(base as char);
+            }
+            return s;
         }
-        s
+        unsafe {
+            let s = str::from_utf8_unchecked(self.inner);
+            s.into()
+        }
     }
 
     pub fn get_bit(&self, index: usize) -> Option<u8> {
@@ -224,6 +231,7 @@ impl BsPoaAligner {
     pub fn align(&mut self) {
         unsafe {
             bindings::bspoa_end(self.poa);
+            bindings::bspoa_tidy_msa(self.poa);
             self.aligned = true;
         }
     }
@@ -235,48 +243,12 @@ impl BsPoaAligner {
         return PoaAlignResult { idx: 0, poa: self };
     }
 
-    pub fn tidy_msa(&mut self) {
-        if !self.aligned {
-            panic!("Align sequences before calling tidy_msa, call `align` first");
-        }
-        unsafe {
-            bindings::bspoa_tidy_msa(self.poa);
-        }
-    }
-
-    // pub fn msa(&mut self) -> u32 {
-    //     if !self.aligned {
-    //         panic!("Align sequences before calling msa, call `align` first");
-    //     }
-    //     unsafe {
-    //         return bindings::bspoa_msa(self.poa) as u32;
-    //     }
-    // }
-
     pub fn call_snvs(&mut self) {
         if !self.aligned {
             panic!("Align sequences before calling call_snvs, call `align` first");
         }
         unsafe {
             bindings::bspoa_call_snvs(self.poa);
-        }
-    }
-
-    pub fn call_simple_cns(&mut self) {
-        if !self.aligned {
-            panic!("Align sequences before calling call_simple_cns, call `align` first");
-        }
-        unsafe {
-            bindings::bspoa_simple_cns(self.poa);
-        }
-    }
-
-    pub fn call_cns(&mut self) {
-        if !self.aligned {
-            panic!("Align sequences before calling call_cns, call `align` first");
-        }
-        unsafe {
-            bindings::bspoa_cns(self.poa);
         }
     }
 
@@ -312,6 +284,17 @@ impl BsPoaAligner {
         }
     }
 
+    pub fn get_cns_with_indel(&self) -> Consensus<'_> {
+        if !self.aligned {
+            panic!("POA must be aligned before getting consensus");
+        }
+        let alignment = self.get_alignment(self.nseq);
+        Consensus {
+            inner: alignment.unwrap().inner,
+            convert: false,
+        }
+    }
+
     pub fn get_cns(&self) -> Consensus<'_> {
         if !self.aligned {
             panic!("Align sequences before calling get_consensus, call `align` first");
@@ -321,7 +304,10 @@ impl BsPoaAligner {
             let cns = bindings::bspoa_get_cns(self.poa, &mut len);
             std::slice::from_raw_parts(cns, len as usize)
         };
-        Consensus { inner: c }
+        Consensus {
+            inner: c,
+            convert: true,
+        }
     }
 
     pub fn get_qlt(&self) -> Quality<'_> {
@@ -644,6 +630,8 @@ mod tests {
         poa.align();
         let cns = poa.get_cns();
         println!("Consensus: {}", cns.as_string());
+        let cns_with_indel = poa.get_cns_with_indel();
+        println!("Consensus with indel: {}", cns_with_indel.as_string());
         assert_eq!(cns.as_string(), "TCATCTGATTAGCTAGTACCCCCCCC");
         let qlt = poa.get_qlt();
         assert_eq!(qlt.len(), cns.len());

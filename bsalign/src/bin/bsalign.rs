@@ -351,7 +351,6 @@ fn main() {
                 }
             }
             poa.align();
-            poa.tidy_msa();
             poa.call_snvs();
             let (color, output) = match output {
                 Some(file) => (0, file),
