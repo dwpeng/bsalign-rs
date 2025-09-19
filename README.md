@@ -7,7 +7,9 @@ A rust binding for the [bsalign](https://github.com/ruanjue/bsalign) library.
 ```bash
 cargo install bsalign
 ```
+
 or install as library
+
 ```bash
 cargo add bsalign
 ```
@@ -52,7 +54,6 @@ fn main() {
     poa.add_sequence(seq2);
     poa.add_sequence(seq3);
     poa.align();
-    poa.call_cns();
     let consensus = poa.get_cns();
     let consensus = consensus.as_string();
     println!("CNS: {}", consensus);
@@ -71,5 +72,4 @@ fn main() {
         println!("     {}", alignment.as_string());
     }
 }
-
 ```
