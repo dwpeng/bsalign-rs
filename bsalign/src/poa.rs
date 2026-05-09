@@ -629,9 +629,6 @@ mod tests {
         poa.add_sequence(seq3);
         poa.align();
         let cns = poa.get_cns();
-        println!("Consensus: {}", cns.as_string());
-        let cns_with_indel = poa.get_cns_with_indel();
-        println!("Consensus with indel: {}", cns_with_indel.as_string());
         assert_eq!(cns.as_string(), "TCATCTGATTAGCTAGTACCCCCCCC");
         let qlt = poa.get_qlt();
         assert_eq!(qlt.len(), cns.len());
