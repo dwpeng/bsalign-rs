@@ -14,7 +14,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Debug, Copy, Clone, ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, ValueEnum)]
 enum AlignCliMode {
     Overlap,
     Global,
@@ -53,7 +53,7 @@ enum Commands {
         #[arg(short = 'M', default_value_t = 2)]
         match_score: i32,
         /// Mismatch score
-        #[arg(short = 'X', default_value_t = -1)]
+        #[arg(short = 'X', default_value_t = -6)]
         mismatch_score: i32,
         /// Gap open score
         #[arg(short = 'O', default_value_t = -3)]
@@ -67,6 +67,9 @@ enum Commands {
         /// Penalty for gap2 extension
         #[arg(short = 'P', default_value_t = 0)]
         gap2_extend_score: i32,
+        /// Print alignment in blocks with position annotations
+        #[arg(short = 'L')]
+        line_format: bool,
         /// The rest of the arguments are FASTA files
         #[arg(required = true)]
         files: Vec<String>,
@@ -92,7 +95,7 @@ enum Commands {
         #[arg(
             short,
             long,
-            default_value = "global",
+            default_value = "overlap",
             hide_long_help = true,
             hide_possible_values = true,
             help = "Align mode: global/extend/overlap"
@@ -114,10 +117,10 @@ enum Commands {
         #[arg(short = 'E', default_value_t = -2)]
         gap_extend_score: i32,
         /// Penalty for gap2 open
-        #[arg(short = 'Q', default_value_t = 0)]
+        #[arg(short = 'Q', default_value_t = -8)]
         gap2_open_score: i32,
         /// Penalty for gap2 extension
-        #[arg(short = 'P', default_value_t = 0)]
+        #[arg(short = 'P', default_value_t = -1)]
         gap2_extend_score: i32,
         /// Limit the number of sequence to align
         #[arg(short = 'n', default_value_t = 0)]
@@ -166,6 +169,7 @@ fn align(
     gap_extend_score: i32,
     gap2_open_score: i32,
     gap2_extend_score: i32,
+    line_format: bool,
 ) {
     let mut align_score = AlignScore::pairwise_default();
     align_score.M = match_score;
@@ -210,9 +214,38 @@ fn align(
     );
 
     let aln = result.to_string();
-    println!("{}", aln.tseq());
-    println!("{}", aln.alignment());
-    println!("{}", aln.qseq());
+    if line_format {
+        let tseq = aln.tseq().as_bytes();
+        let alnstr = aln.alignment().as_bytes();
+        let qseq = aln.qseq().as_bytes();
+        let len = tseq.len();
+        let mut qb = result.qb as usize;
+        let mut tb = result.tb as usize;
+        let mut b = 0;
+        while b < len {
+            let e = std::cmp::min(b + 100, len);
+            let mut qn = qb;
+            let mut tn = tb;
+            for i in b..e {
+                if tseq[i] != b'-' {
+                    qn += 1;
+                }
+                if qseq[i] != b'-' {
+                    tn += 1;
+                }
+            }
+            println!("{}\tQ[{}]", std::str::from_utf8(&tseq[b..e]).unwrap(), qn);
+            println!("{}", std::str::from_utf8(&alnstr[b..e]).unwrap());
+            println!("{}\tT[{}]", std::str::from_utf8(&qseq[b..e]).unwrap(), tn);
+            qb = qn;
+            tb = tn;
+            b = e;
+        }
+    } else {
+        println!("{}", aln.tseq());
+        println!("{}", aln.alignment());
+        println!("{}", aln.qseq());
+    }
 }
 
 fn edit(rseq: &Record, qseq: &Record, mode: AlignCliMode, bandwidth: i32, ksize: usize) {
@@ -273,6 +306,7 @@ fn main() {
             gap_extend_score,
             gap2_open_score,
             gap2_extend_score,
+            line_format,
             files,
         } => {
             match mode {
@@ -294,6 +328,7 @@ fn main() {
                 gap_extend_score,
                 gap2_open_score,
                 gap2_extend_score,
+                line_format,
             );
         }
         Commands::Edit {
@@ -302,6 +337,12 @@ fn main() {
             ksize,
             files,
         } => {
+            let bandwidth = if mode == AlignCliMode::Overlap && bandwidth != 0 {
+                eprintln!(" ** disable band in bsalign-edit's overlap mode ** ");
+                0
+            } else {
+                bandwidth
+            };
             let records = read_records(files, 2);
             edit(&records[0], &records[1], mode, bandwidth, ksize);
         }
