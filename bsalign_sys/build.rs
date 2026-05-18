@@ -42,9 +42,7 @@ fn complie() {
 
     #[cfg(target_arch = "aarch64")]
     {
-        b.flag("-march=armv8-a+simd");
-        b.flag("-mfpu=neon");
-        b.flag("-mfloat-abi=softfp");
+        panic!("bsalign does not support aarch64 yet");
     }
 
     b.compile("bsalign");
