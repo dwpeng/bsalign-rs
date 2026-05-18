@@ -377,38 +377,33 @@ impl BsPairwirseAligner {
         PsaAlignResult::init_with(&self.tseq, &self.qseq, &self.cigars, r)
     }
 
-    // // unsable for 2bit alignment, so commented out
-    // pub unsafe fn align_striped_edit_2bit<T>(&mut self, qseq: &T, tseq: &T) -> PsaAlignResult
-    // where
-    //     T: AsRef<[u8]> + ?Sized,
-    // {
-    //     let qseq = qseq.as_ref();
-    //     let tseq = tseq.as_ref();
-    //     unsafe {
-    //         bindings::create_bits_from_seq(self.qseq, qseq.as_ptr(), qseq.len() as u32);
-    //         bindings::create_bits_from_seq(self.tseq, tseq.as_ptr(), tseq.len() as u32);
-    //     }
-    //     let len1 = qseq.len();
-    //     let len2 = tseq.len();
-    //     let r = unsafe {
-    //         bindings::bs_s_epi2_seqedit_pairwise(
-    //             self.qseq.as_mut().unwrap().buffer,
-    //             len1 as u32,
-    //             tseq.as_ptr() as *mut u8,
-    //             len2 as u32,
-    //             self.mempool,
-    //             self.cigars.as_mut_ptr(),
-    //             self.param.mode as i32,
-    //             0,
-    //         )
-    //     };
-    //     PsaAlignResult {
-    //         result: r,
-    //         qseq: self.qseq,
-    //         tseq: self.tseq,
-    //         cigars: &self.cigars,
-    //     }
-    // }
+    pub unsafe fn align_striped_edit_2bit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult<'_>
+    where
+        T: AsRef<[u8]> + ?Sized,
+    {
+        self.reset();
+        let qseq = qseq.as_ref();
+        let tseq = tseq.as_ref();
+        unsafe {
+            bindings::create_bits_from_seq(self.qseq.as_ptr(), qseq.as_ptr(), qseq.len() as u32);
+            bindings::create_bits_from_seq(self.tseq.as_ptr(), tseq.as_ptr(), tseq.len() as u32);
+        }
+        let len1 = qseq.len();
+        let len2 = tseq.len();
+        let r = unsafe {
+            bindings::bs_s_epi2_seqedit_pairwise(
+                self.qseq.buffer(),
+                len1 as u32,
+                self.tseq.buffer(),
+                len2 as u32,
+                self.mempool.as_ptr(),
+                self.cigars.as_ptr(),
+                self.param.mode as i32,
+                0,
+            )
+        };
+        PsaAlignResult::init_with(&self.tseq, &self.qseq, &self.cigars, r)
+    }
 
     pub fn align_striped_edit<T>(&mut self, tseq: &T, qseq: &T) -> PsaAlignResult<'_>
     where
@@ -481,15 +476,50 @@ mod tests {
         assert_eq!(result.aln, qseq.len());
     }
 
-    // #[test]
-    // fn test_striped_edit_align_2bit() {
-    //     let qseq = include_str!("../../test-data/seq.seq");
-    //     let param = BsPairwiseParam::default().set_ksize(4);
-    //     let mut aligner = BsPairwirseAligner::new(param);
-    //     let result = unsafe { aligner.align_striped_edit_2bit(qseq, qseq) };
-    //     eprintln!("result: {:?}", result);
-    //     assert_eq!(result.aln, qseq.len() as i32);
-    // }
+    #[test]
+    fn test_striped_edit_align_2bit() {
+        let qseq = include_str!("../../test-data/seq.seq");
+        let param = BsPairwiseParam::default().set_ksize(4);
+        let mut aligner = BsPairwirseAligner::new(param);
+        let result = unsafe { aligner.align_striped_edit_2bit(qseq, qseq) };
+        assert_eq!(result.aln, qseq.len());
+    }
+
+    #[test]
+    fn test_striped_edit_align_2bit_identical() {
+        let param = BsPairwiseParam::default();
+        let mut aligner = BsPairwirseAligner::new(param);
+        let seq = "ACGTACGTACGTACGT";
+        let result = unsafe { aligner.align_striped_edit_2bit(seq, seq) };
+        assert_eq!(result.aln, seq.len());
+        assert_eq!(result.mat, seq.len());
+        assert_eq!(result.mis, 0);
+        assert_eq!(result.ins, 0);
+        assert_eq!(result.del, 0);
+    }
+
+    #[test]
+    fn test_striped_edit_align_2bit_with_mismatch() {
+        let param = BsPairwiseParam::default();
+        let mut aligner = BsPairwirseAligner::new(param);
+        let tseq = "ACGTACGTACGT";
+        let qseq = "ACGAACGTACGT"; // T->A at pos 3
+        let result = unsafe { aligner.align_striped_edit_2bit(tseq, qseq) };
+        assert_eq!(result.aln, tseq.len());
+        assert_eq!(result.mat, tseq.len() - 1);
+        assert_eq!(result.mis, 1);
+    }
+
+    #[test]
+    fn test_striped_edit_align_2bit_with_insertion() {
+        let param = BsPairwiseParam::default();
+        let mut aligner = BsPairwirseAligner::new(param);
+        let tseq = "ACGTACGT";
+        let qseq = "ACGTttttttACGT"; // NNN insertion
+        let result = unsafe { aligner.align_striped_edit_2bit(tseq, qseq) };
+        assert!(result.aln > 0);
+        assert!(result.ins > 0);
+    }
 
     #[test]
     fn test_kmer_striped_edit_align() {

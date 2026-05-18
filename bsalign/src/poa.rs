@@ -617,6 +617,7 @@ impl BsPoaParam {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_poa() {
         let bspoa_params = BsPoaParam::default().set_varcnt(1);
@@ -640,5 +641,629 @@ mod tests {
             assert_eq!(poa.metainfo().unwrap(), "test");
         }
         std::fs::remove_file("test.msa").unwrap();
+    }
+
+    #[test]
+    fn test_identical_sequences() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        let seq = "ACGTACGTACGT";
+        poa.add_sequence(seq);
+        poa.add_sequence(seq);
+        poa.add_sequence(seq);
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_single_sequence() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGT");
+        assert_eq!(poa.nseq, 1);
+    }
+
+    #[test]
+    fn test_consensus_reflects_majority() {
+        // 3 sequences agree on A, 1 disagrees with T at position 4
+        let mut poa = BsPoaAligner::new(BsPoaParam::default().set_varcnt(1));
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT"); // A instead of T at pos 3
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_insertion_in_one_sequence() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTNNNACGT"); // insertion of NNN
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        // 2/3 sequences have no insertion, consensus should match the majority
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_deletion_in_one_sequence() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGACGT"); // deletion of T at pos 3
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        // 2/3 sequences have the T, consensus should match the majority
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_alignment_iterator() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let results: Vec<AlignmentString> = poa.get_alignment_result().collect();
+        assert_eq!(results.len(), 3);
+        for r in &results {
+            assert!(r.len() > 0);
+            let _ = r.as_string();
+        }
+    }
+
+    #[test]
+    fn test_get_alignment_by_index() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.align();
+        assert!(poa.get_alignment(0).is_some());
+        assert!(poa.get_alignment(1).is_some());
+        // nseq is 2, get_alignment(nseq) returns the consensus row
+        assert!(poa.get_alignment(2).is_some());
+        // out of range
+        assert!(poa.get_alignment(100).is_none());
+    }
+
+    #[test]
+    fn test_quality_values() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let qlt = poa.get_qlt();
+        assert!(qlt.len() > 0);
+        // Quality values should be valid (0-93 range for Phred+33 encoding)
+        for i in 0..qlt.len() {
+            let q = qlt.get(i).unwrap();
+            assert!(
+                q <= 93,
+                "quality value {} at index {} exceeds Phred range",
+                q,
+                i
+            );
+        }
+        let qlt_str = qlt.as_string();
+        assert_eq!(qlt_str.len(), qlt.len());
+    }
+
+    #[test]
+    fn test_quality_out_of_bounds() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.align();
+        let qlt = poa.get_qlt();
+        assert!(qlt.get(qlt.len()).is_none());
+    }
+
+    #[test]
+    fn test_consensus_accessors() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        // get_base returns ASCII bases
+        assert_eq!(cns.get_base(0), Some(b'A'));
+        assert_eq!(cns.get_base(1), Some(b'C'));
+        assert_eq!(cns.get_base(2), Some(b'G'));
+        assert_eq!(cns.get_base(3), Some(b'T'));
+        assert_eq!(cns.get_base(4), None);
+        // get_bit returns 2-bit encoded values (0=A, 1=C, 2=G, 3=T)
+        assert_eq!(cns.get_bit(0), Some(0));
+        assert_eq!(cns.get_bit(1), Some(1));
+        assert_eq!(cns.get_bit(2), Some(2));
+        assert_eq!(cns.get_bit(3), Some(3));
+        assert_eq!(cns.get_bit(4), None);
+    }
+
+    #[test]
+    fn test_alt_values() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default().set_varcnt(1));
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT"); // A instead of T at pos 3
+        poa.align();
+        let alt = poa.get_alt();
+        assert!(alt.len() > 0);
+        for i in 0..alt.len() {
+            assert!(alt.get(i).is_some());
+        }
+        assert_eq!(alt.as_string().len(), alt.len());
+    }
+
+    #[test]
+    fn test_alt_out_of_bounds() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.align();
+        let alt = poa.get_alt();
+        assert!(alt.get(alt.len()).is_none());
+    }
+
+    #[test]
+    fn test_reset_and_reuse() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        // First round
+        poa.add_sequence("AAAA");
+        poa.add_sequence("AAAA");
+        poa.align();
+        assert_eq!(poa.get_cns().as_string(), "AAAA");
+        assert_eq!(poa.nseq, 2);
+
+        // Reset for second round
+        poa.reset();
+        assert_eq!(poa.nseq, 0);
+        poa.add_sequence("CCCC");
+        poa.add_sequence("CCCC");
+        poa.add_sequence("CCCC");
+        poa.align();
+        assert_eq!(poa.get_cns().as_string(), "CCCC");
+        assert_eq!(poa.nseq, 3);
+    }
+
+    #[test]
+    fn test_alignment_string_as_bytes() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.align();
+        let aln = poa.get_alignment(0).unwrap();
+        let bytes = aln.as_bytes();
+        assert_eq!(bytes.len(), aln.len());
+        assert_eq!(aln.as_string().as_bytes(), bytes);
+    }
+
+    #[test]
+    fn test_nseq_tracking() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        assert_eq!(poa.nseq, 0);
+        poa.add_sequence("ACGT");
+        assert_eq!(poa.nseq, 1);
+        poa.add_sequence("ACGT");
+        assert_eq!(poa.nseq, 2);
+        poa.add_sequence("ACGT");
+        assert_eq!(poa.nseq, 3);
+    }
+
+    #[test]
+    fn test_param_builder_chain() {
+        let param = BsPoaParam::default()
+            .set_refmode(PoaParamRefMode::Reference)
+            .set_shuffle(false)
+            .set_alnmode(AlignMode::Global)
+            .set_realn(5)
+            .set_seqcore(10)
+            .set_nrec(10)
+            .set_ksz(11)
+            .set_bwtrigger(0)
+            .set_bandwidth(64)
+            .set_score(AlignScore {
+                M: 1,
+                X: -4,
+                O: -2,
+                E: -1,
+                Q: -6,
+                P: -1,
+            })
+            .set_refbonus(2)
+            .set_editbw(32)
+            .set_althi(10)
+            .set_qlthi(50)
+            .set_varcnt(5)
+            .set_covfrq(0.8)
+            .set_snvqlt(10)
+            .set_consensus_param(PoaParamCns {
+                psub: 0.05,
+                pins: 0.05,
+                pdel: 0.10,
+                piex: 0.10,
+                pdex: 0.15,
+                hins: 0.15,
+                hdel: 0.30,
+            });
+
+        assert_eq!(param.refmode, PoaParamRefMode::Reference as i32);
+        assert_eq!(param.shuffle, 0);
+        assert_eq!(param.alnmode, AlignMode::Global as i32);
+        assert_eq!(param.realn, 5);
+        assert_eq!(param.seqcore, 10);
+        assert_eq!(param.M, 1);
+        assert_eq!(param.X, -4);
+        assert_eq!(param.refbonus, 2);
+        assert_eq!(param.editbw, 32);
+        assert_eq!(param.psub, 0.05);
+    }
+
+    #[test]
+    fn test_refmode_first_sequence_as_reference() {
+        let param = BsPoaParam::default()
+            .set_refmode(PoaParamRefMode::Reference)
+            .set_varcnt(1);
+        let mut poa = BsPoaAligner::new(param);
+        // First sequence is the reference
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT"); // variant at pos 3
+        poa.add_sequence("ACGAACGT"); // variant at pos 3
+        poa.align();
+        let cns = poa.get_cns();
+        let cns_str = cns.as_string();
+        // With reference mode, consensus should be influenced by the reference
+        assert!(cns_str.len() > 0);
+    }
+
+    #[test]
+    fn test_many_sequences() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default().set_varcnt(1));
+        let base = "ACGTACGTACGTACGT";
+        for _ in 0..20 {
+            poa.add_sequence(base);
+        }
+        // Add one sequence with a variant
+        poa.add_sequence("ACGTACGAACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        // 20/21 sequences agree, so consensus should match the majority
+        assert_eq!(cns.as_string(), base);
+    }
+
+    #[test]
+    fn test_dump_and_load_msa_without_metainfo() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        // Dump without setting metainfo
+        poa.dump_msa("test_no_meta.msa");
+        let loaded = BsPoaAligner::load_msa("test_no_meta.msa");
+        assert!(loaded.is_some());
+        if let Some(loaded) = loaded {
+            assert!(loaded.metainfo().is_none());
+        }
+        std::fs::remove_file("test_no_meta.msa").unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Align sequences before calling")]
+    fn test_get_cns_before_align_panics() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.get_cns(); // should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Align sequences before calling")]
+    fn test_get_qlt_before_align_panics() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.get_qlt(); // should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Align sequences before calling")]
+    fn test_get_alignment_result_before_align_panics() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.get_alignment_result(); // should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Align sequences before calling")]
+    fn test_call_snvs_before_align_panics() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.call_snvs(); // should panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Align sequences before calling")]
+    fn test_get_alt_before_align_panics() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.get_alt(); // should panic
+    }
+
+    #[test]
+    fn test_cns_with_indel() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.align();
+        let cns_indel = poa.get_cns_with_indel();
+        let s = cns_indel.as_string();
+        // get_cns_with_indel returns the raw alignment row (may include trailing gaps)
+        assert!(s.starts_with("ACGTACGT"));
+        assert!(cns_indel.len() > 0);
+    }
+
+    #[test]
+    fn test_call_snvs_and_print() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default().set_varcnt(1));
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT"); // variant at pos 3
+        poa.align();
+        poa.call_snvs();
+        poa.print_snvs(Some("test_label"), "/dev/null");
+    }
+
+    #[test]
+    fn test_print_snvs_no_label() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default().set_varcnt(1));
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT");
+        poa.align();
+        poa.call_snvs();
+        poa.print_snvs(None, "/dev/null");
+    }
+
+    #[test]
+    fn test_get_alignment_result_count_matches_nseq() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.align();
+        let count = poa.get_alignment_result().count();
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn test_long_sequences() {
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        // Generate two 1000bp sequences with a few variants
+        let mut seq1 = String::with_capacity(1000);
+        let mut seq2 = String::with_capacity(1000);
+        for i in 0..1000 {
+            seq1.push(match i % 4 {
+                0 => 'A',
+                1 => 'C',
+                2 => 'G',
+                _ => 'T',
+            });
+            seq2.push(match i % 4 {
+                0 => 'A',
+                1 => 'C',
+                2 => 'G',
+                _ => 'T',
+            });
+        }
+        // Introduce a few mutations in seq2
+        unsafe {
+            seq2.as_bytes_mut()[100] = b'T';
+        }
+        unsafe {
+            seq2.as_bytes_mut()[500] = b'A';
+        }
+        unsafe {
+            seq2.as_bytes_mut()[900] = b'C';
+        }
+
+        poa.add_sequence(&seq1);
+        poa.add_sequence(&seq2);
+        poa.align();
+        let cns = poa.get_cns();
+        // 2 sequences with only 3 mutations out of 1000bp — majority wins
+        assert_eq!(cns.as_string(), seq1);
+    }
+
+    #[test]
+    fn test_dna_bases() {
+        // Verify all 4 DNA bases are handled correctly in consensus
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        poa.add_sequence("ACGT");
+        poa.add_sequence("ACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.get_base(0), Some(b'A'));
+        assert_eq!(cns.get_base(1), Some(b'C'));
+        assert_eq!(cns.get_base(2), Some(b'G'));
+        assert_eq!(cns.get_base(3), Some(b'T'));
+    }
+
+    #[test]
+    fn test_bytes_input() {
+        // Verify sequences can be added as byte slices
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        let seq: &[u8] = b"ACGTACGT";
+        poa.add_sequence(seq);
+        poa.add_sequence(seq);
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_vec_u8_input() {
+        // Verify sequences can be added as Vec<u8>
+        let mut poa = BsPoaAligner::new(BsPoaParam::default());
+        let seq: Vec<u8> = b"ACGTACGT".to_vec();
+        poa.add_sequence(&seq);
+        poa.add_sequence(&seq);
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_default() {
+        let param = BsPoaParam::default();
+        assert_eq!(param.bandwidth, 128);
+    }
+
+    #[test]
+    fn test_bandwidth_small() {
+        // Small bandwidth should still produce correct consensus for identical sequences
+        let param = BsPoaParam::default().set_bandwidth(4).set_editbw(4);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_large() {
+        // Large bandwidth for high-divergence sequences
+        let param = BsPoaParam::default().set_bandwidth(512).set_editbw(256);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_affects_alignment_with_indels() {
+        // Sequences with an insertion — bandwidth should handle the gap
+        let param = BsPoaParam::default().set_bandwidth(32).set_editbw(32);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGTAAAACGTACGT"); // insertion of AAA
+        poa.add_sequence("ACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        // 2/3 sequences have no insertion, consensus should match the majority
+        assert_eq!(cns.as_string(), "ACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bwtrigger_disabled() {
+        // bwtrigger=0 disables banded triggering
+        let param = BsPoaParam::default().set_bwtrigger(0).set_bandwidth(64);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bwtrigger_enabled() {
+        // bwtrigger > 0 enables banded alignment after trigger reads
+        let param = BsPoaParam::default()
+            .set_bwtrigger(2)
+            .set_bandwidth(64)
+            .set_editbw(32);
+        let mut poa = BsPoaAligner::new(param);
+        for _ in 0..5 {
+            poa.add_sequence("ACGTACGTACGTACGT");
+        }
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_editbw_small() {
+        // Small edit bandwidth — works for identical or near-identical sequences
+        let param = BsPoaParam::default().set_editbw(8);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGTACGT");
+        poa.add_sequence("ACGAACGT"); // 1 substitution
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGT");
+    }
+
+    #[test]
+    fn test_editbw_large() {
+        // Large edit bandwidth for sequences with more gaps
+        let param = BsPoaParam::default().set_editbw(128);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGTACGT");
+        poa.add_sequence("ACGTACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_and_editbw_combined() {
+        // Both bandwidth and editbw set to moderate values
+        let param = BsPoaParam::default()
+            .set_bandwidth(16)
+            .set_editbw(16)
+            .set_bwtrigger(1);
+        let mut poa = BsPoaAligner::new(param);
+        let seqs: Vec<&str> = vec![
+            "ACGTACGTACGTACGTACGT",
+            "ACGTACGTACGTACGTACGT",
+            "ACGTACGTACGAACGTACGT", // 1 substitution
+            "ACGTACGTACGTACGTACGT",
+        ];
+        for s in &seqs {
+            poa.add_sequence(s);
+        }
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_with_many_sequences() {
+        // Many sequences with moderate bandwidth
+        let param = BsPoaParam::default()
+            .set_bandwidth(64)
+            .set_editbw(64)
+            .set_seqcore(10);
+        let mut poa = BsPoaAligner::new(param);
+        for _ in 0..15 {
+            poa.add_sequence("ACGTACGTACGTACGT");
+        }
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGTACGT");
+    }
+
+    #[test]
+    fn test_bandwidth_with_snv_detection() {
+        // Bandwidth settings should not break SNV detection
+        let param = BsPoaParam::default()
+            .set_bandwidth(32)
+            .set_editbw(32)
+            .set_varcnt(1);
+        let mut poa = BsPoaAligner::new(param);
+        poa.add_sequence("ACGTACGTACGT");
+        poa.add_sequence("ACGAACGTACGT"); // SNV at pos 3: T->A
+        poa.add_sequence("ACGTACGTACGT");
+        poa.align();
+        let cns = poa.get_cns();
+        assert_eq!(cns.as_string(), "ACGTACGTACGT");
+        // Alt should reflect the variant
+        let alt = poa.get_alt();
+        assert!(alt.len() > 0);
     }
 }
