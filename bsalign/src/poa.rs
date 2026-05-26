@@ -333,7 +333,8 @@ impl BsPoaAligner {
         let mut len: usize = 0;
         let inner = unsafe {
             let buffer = bindings::bspoa_get_rid_alignment(self.poa, idx as i32, &mut len);
-            std::slice::from_raw_parts(buffer, len)
+            assert!(len > 1, "Alignment length should be greater than 0");
+            std::slice::from_raw_parts(buffer, len - 1)
         };
         Some(AlignmentString { inner })
     }
