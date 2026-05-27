@@ -144,7 +144,6 @@ pub struct __BindgenComplex<T> {
 #[repr(transparent)]
 pub struct __BindgenFloat16(pub u16);
 pub const _FEATURES_H: u8 = 1;
-pub const __GLIBC__: u8 = 2;
 pub const _DEFAULT_SOURCE: u8 = 1;
 pub const __GLIBC_USE_ISOC2Y: u8 = 0;
 pub const __GLIBC_USE_ISOC23: u8 = 0;
@@ -178,6 +177,8 @@ pub const __STDC_IEC_559_COMPLEX__: u8 = 1;
 pub const __STDC_IEC_60559_COMPLEX__: u32 = 201404;
 pub const __STDC_ISO_10646__: u32 = 201706;
 pub const __GNU_LIBRARY__: u8 = 6;
+pub const __GLIBC__: u8 = 2;
+pub const __GLIBC_MINOR__: u8 = 41;
 pub const _SYS_CDEFS_H: u8 = 1;
 pub const __glibc_c99_flexarr_available: u8 = 1;
 pub const __LDOUBLE_REDIRECTS_TO_FLOAT128_ABI: u8 = 0;
@@ -2031,6 +2032,15 @@ unsafe extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 unsafe extern "C" {
+    pub fn arc4random() -> __uint32_t;
+}
+unsafe extern "C" {
+    pub fn arc4random_buf(__buf: *mut ::std::os::raw::c_void, __size: usize);
+}
+unsafe extern "C" {
+    pub fn arc4random_uniform(__upper_bound: __uint32_t) -> __uint32_t;
+}
+unsafe extern "C" {
     pub fn malloc(__size: ::std::os::raw::c_ulong) -> *mut ::std::os::raw::c_void;
 }
 unsafe extern "C" {
@@ -2047,6 +2057,13 @@ unsafe extern "C" {
 }
 unsafe extern "C" {
     pub fn free(__ptr: *mut ::std::os::raw::c_void);
+}
+unsafe extern "C" {
+    pub fn reallocarray(
+        __ptr: *mut ::std::os::raw::c_void,
+        __nmemb: usize,
+        __size: usize,
+    ) -> *mut ::std::os::raw::c_void;
 }
 unsafe extern "C" {
     pub fn alloca(__size: ::std::os::raw::c_ulong) -> *mut ::std::os::raw::c_void;
@@ -2667,6 +2684,20 @@ unsafe extern "C" {
         __src: *const ::std::os::raw::c_char,
         __n: ::std::os::raw::c_ulong,
     ) -> *mut ::std::os::raw::c_char;
+}
+unsafe extern "C" {
+    pub fn strlcpy(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: usize,
+    ) -> usize;
+}
+unsafe extern "C" {
+    pub fn strlcat(
+        __dest: *mut ::std::os::raw::c_char,
+        __src: *const ::std::os::raw::c_char,
+        __n: usize,
+    ) -> usize;
 }
 pub type int_least8_t = __int_least8_t;
 pub type int_least16_t = __int_least16_t;
