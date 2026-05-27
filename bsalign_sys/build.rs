@@ -1,8 +1,6 @@
 fn complie() {
-    println!("cargo:rustc-link-lib=z");
     println!("cargo:rustc-link-lib=pthread");
     println!("cargo:rustc-link-lib=m");
-    println!("cargo:rustc-link-lib=rt");
 
     let debug = std::env::var("CARGO_CFG_DEBUG").unwrap_or_else(|_| "false".to_string()) == "true";
 
@@ -20,8 +18,6 @@ fn complie() {
         .flag("-D_GNU_SOURCE")
         .flag("-D_FILE_OFFSET_BITS=64")
         .flag("-DVERSION=\"1.2.1\"")
-        .static_flag(true)
-        .shared_flag(true)
         .warnings(false)
         .extra_warnings(false)
         .cargo_warnings(false);
