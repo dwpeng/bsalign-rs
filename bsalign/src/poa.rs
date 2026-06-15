@@ -89,6 +89,18 @@ impl<'a> Consensus<'a> {
         }
     }
 
+    pub fn to_vec(&self, buf: &mut Vec<u8>) {
+        buf.clear();
+        if self.convert {
+            for i in 0..self.len() {
+                let base = self.get_base(i).unwrap();
+                buf.push(base);
+            }
+        } else {
+            buf.extend_from_slice(self.inner);
+        }
+    }
+
     pub fn get_bit(&self, index: usize) -> Option<u8> {
         if index >= self.len() {
             return None;
