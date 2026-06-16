@@ -64,6 +64,7 @@ void bspoa_print_snvs(BSPOA *poa, char *label, c_file_t *fp);
 void bspoa_print_msa(BSPOA *poa, char *label, u4i mbeg, u4i mend, u4i linewidth,
                      int colorful, c_file_t *fp);
 void bspoa_begin(BSPOA *poa);
+void bspoa_renew(BSPOA *poa);
 void bspoa_end(BSPOA *poa);
 void bspoa_dump_binary_msa(BSPOA *poa, char *metadata, u4i metalen,
                            const char *filename);

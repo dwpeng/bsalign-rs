@@ -15396,6 +15396,9 @@ unsafe extern "C" {
     pub fn bspoa_begin(poa: *mut BSPOA);
 }
 unsafe extern "C" {
+    pub fn bspoa_renew(poa: *mut BSPOA);
+}
+unsafe extern "C" {
     pub fn bspoa_end(poa: *mut BSPOA);
 }
 unsafe extern "C" {

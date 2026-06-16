@@ -19,6 +19,7 @@ void bspoa_print_msa(BSPOA *poa, char *label, u4i mbeg, u4i mend, u4i linewidth,
   print_msa_bspoa(poa, label, mbeg, mend, linewidth, colorful, fp->fp);
 }
 void bspoa_begin(BSPOA *poa) { beg_bspoa(poa); }
+void bspoa_renew(BSPOA *poa) { renew_bspoa(poa); }
 void bspoa_end(BSPOA *poa) { end_bspoa(poa); }
 void bspoa_dump_binary_msa(BSPOA *poa, char *metadata, u4i metalen,
                            const char *filename) {

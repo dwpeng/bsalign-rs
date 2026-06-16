@@ -375,8 +375,8 @@ impl BsPoaAligner {
             };
 
             let cfile = bindings::c_file_open(cfilename.as_ptr() as *mut c_char);
-
             bindings::bspoa_print_snvs(self.poa, clabel.as_ptr() as *mut i8, cfile);
+            bindings::c_file_close(cfile);
         }
     }
 }
@@ -1278,5 +1278,117 @@ mod tests {
         // Alt should reflect the variant
         let alt = poa.get_alt();
         assert!(alt.len() > 0);
+    }
+
+    /// Read current process RSS in bytes from /proc/self/statm (Linux only).
+    fn current_rss_bytes() -> usize {
+        let statm = std::fs::read_to_string("/proc/self/statm").unwrap();
+        // Field 1 is RSS in pages
+        let rss_pages: usize = statm.split_whitespace().nth(1).unwrap().parse().unwrap();
+        let page_size = 4096usize; // standard page size on x86_64 Linux
+        rss_pages * page_size
+    }
+
+    #[test]
+    fn test_reset_memory_stable() {
+        // Verify that repeatedly reusing an aligner via reset() does not cause
+        // unbounded memory growth.  Run many iterations with varying-length
+        // sequences and assert that RSS stabilises after an initial warm-up.
+        let params = BsPoaParam::default()
+            .set_refmode(PoaParamRefMode::Reference)
+            .set_alnmode(AlignMode::Overlap)
+            .set_realn(0)
+            .set_ksz(15)
+            .set_bandwidth(32)
+            .set_editbw(32)
+            .set_shuffle(true);
+        let mut poa = BsPoaAligner::new(params);
+
+        let warmup_iters = 32; // let buffers reach high-water mark
+        let measure_iters = 128; // measure after stabilisation
+        let seq_count = 30;
+        let seq_len = 5000;
+
+        // Pre-allocate all sequences once to avoid allocator noise in RSS.
+        let mut rng_seed: u64 = 0x1234_5678_9ABC_DEF0;
+        let next_u64 = |seed: &mut u64| -> u64 {
+            *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            *seed
+        };
+        let all_seqs: Vec<Vec<Vec<u8>>> = (0..warmup_iters + measure_iters)
+            .map(|_| {
+                (0..seq_count)
+                    .map(|_| {
+                        let mut s = Vec::with_capacity(seq_len);
+                        for _ in 0..seq_len {
+                            let val = next_u64(&mut rng_seed);
+                            let base = match (val >> 33) & 0x3 {
+                                0 => b'A',
+                                1 => b'C',
+                                2 => b'G',
+                                _ => b'T',
+                            };
+                            s.push(base);
+                        }
+                        s
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // --- warm-up phase: fill buffers to their high-water mark ---
+        for (idx, batch) in all_seqs[..warmup_iters].iter().enumerate() {
+            if idx % 16 == 0 {
+                eprintln!("[warmup {}/{}]", idx, warmup_iters);
+            }
+            poa.reset();
+            for seq in batch {
+                poa.add_sequence(seq);
+            }
+            poa.align();
+            let _ = poa.get_cns();
+        }
+
+        // --- measurement phase: collect RSS samples ---
+        // All sequences are pre-allocated so the only varying factor is the
+        // POA aligner's internal memory.
+        let mut samples = Vec::with_capacity(measure_iters / 16 + 1);
+        for (i, batch) in all_seqs[warmup_iters..].iter().enumerate() {
+            if i % 64 == 0 {
+                eprintln!("[measure {}/{}]", i, measure_iters);
+            }
+            poa.reset();
+            for seq in batch {
+                poa.add_sequence(seq);
+            }
+            poa.align();
+            let _ = poa.get_cns();
+            if i % 16 == 0 {
+                samples.push(current_rss_bytes());
+            }
+        }
+
+        // --- assertions ---
+        // Compare the first third of samples against the last third.
+        // RSS should not grow by more than 5 % after warm-up.
+        let n = samples.len();
+        let early: f64 = samples[..n / 3].iter().sum::<usize>() as f64 / (n / 3) as f64;
+        let late: f64 = samples[n * 2 / 3..].iter().sum::<usize>() as f64 / (n - n * 2 / 3) as f64;
+        let growth_pct = ((late - early) / early) * 100.0;
+
+        eprintln!(
+            "Memory test: early_avg={:.2} MB, late_avg={:.2} MB, growth={:.2}%",
+            early / (1024.0 * 1024.0),
+            late / (1024.0 * 1024.0),
+            growth_pct,
+        );
+
+        assert!(
+            growth_pct < 5.0,
+            "Memory grew by {:.2}% after warm-up — possible leak (early={:.2} MB, late={:.2} MB)",
+            growth_pct,
+            early / (1024.0 * 1024.0),
+            late / (1024.0 * 1024.0),
+        );
     }
 }
