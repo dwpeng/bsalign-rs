@@ -390,7 +390,7 @@ impl BsPairwirseAligner {
         }
         let len1 = qseq.len();
         let len2 = tseq.len();
-        let r = unsafe {
+        let mut r = unsafe {
             bindings::bs_s_epi2_seqedit_pairwise(
                 self.qseq.buffer(),
                 len1 as u32,
@@ -402,6 +402,10 @@ impl BsPairwirseAligner {
                 0,
             )
         };
+        // bsalign.h:1787L
+        // rs.aln = rs.mat + rs.mis + rs.ins + rs.del;
+        // score means the number of edits: rs.mis + rs.ins + rs.del
+        r.score = r.mis + r.ins + r.del;
         PsaAlignResult::init_with(&self.tseq, &self.qseq, &self.cigars, r)
     }
 
@@ -576,5 +580,15 @@ mod tests {
         let cigars = result.cigars;
         assert_eq!(cigars.as_ptr(), std::ptr::null_mut());
         assert_eq!(cigars.len(), 0);
+    }
+
+    #[test]
+    fn test_2bit() {
+        let param = BsPairwiseParam::default();
+        let mut aligner = BsPairwirseAligner::new(param);
+        let tseq = "ACGTACGT";
+        let qseq = "ACGAACGT";
+        let result = unsafe { aligner.align_striped_edit_2bit(tseq, qseq) };
+        assert_eq!(result.score, 1);
     }
 }
